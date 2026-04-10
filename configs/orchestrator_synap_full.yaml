@@ -1,0 +1,53 @@
+# Multi-Dataset Orchestrator — Full Synap Evaluation
+# Runs LongMemEval, LoCoMo, and DMR concurrently against Synap.
+# Each dataset gets its own user_id, checkpoint, and output directory.
+# Ingestion and evaluation run independently per dataset.
+
+orchestrator:
+  # All pipelines share this single Synap adapter instance
+  adapter:
+    name: "synap"
+    module: "adapters.synap_adapter.SynapAdapter"
+    config_path: "./configs/synap.yaml"
+
+  # LLM settings for evaluation (answering + judging)
+  llm:
+    model: "gemini-3-pro-preview"
+    provider: "google"
+    judge_model: "gemini-3-pro-preview"
+    temperature: 0.0
+
+  agent_system_prompt_path: "./prompts/system_prompt.md"
+  agent_max_iterations: 5
+
+  # Concurrency: how many eval questions to run in parallel per dataset
+  eval_concurrency: 3
+
+  # Output root
+  output_dir: "./results/orchestrator"
+
+  # Checkpoint root (one file per dataset)
+  checkpoint_dir: "./checkpoints/orchestrator"
+
+# ── Dataset Pipelines ─────────────────────────────────────────────
+pipelines:
+  longmemeval:
+    enabled: true
+    dataset: "longmemeval"
+    user_id: "longmemeval_bench_user"
+    ingestion_method: "longterm"        # Full session transcripts via memories.create(mode='long-range')
+    ingestion_buffer_seconds: 30        # Wait after ingestion for async extraction
+    max_records: 0                      # 0 = all records
+    max_questions: 0                    # 0 = all questions
+    retrieval_mode: "accurate"
+    retrieval_max_results: 20
+    warmup_delay_seconds: 10            # Wait after warmup queries before eval starts
+    batch_ingest: true                   # Use batch memories.batch_create() per batch
+    batch_size: 50                      # Sessions per batch API call
+    batch_delay_seconds: 2              # Delay between batches
+
+# ── Scoring ───────────────────────────────────────────────────────
+scoring:
+  scorers:
+    - "llm_judge"
+  run_after_completion: true

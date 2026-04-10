@@ -1,0 +1,15 @@
+# Synap adapter configuration
+instance_id: "${SYNAP_INSTANCE_ID}"
+api_key: "${SYNAP_API_KEY}"
+base_url: "${SYNAP_BASE_URL}"
+bootstrap_token: "${SYNAP_BOOTSTRAP_TOKEN}"
+client_id: "${SYNAP_CLIENT_ID}"
+# mode: "ACCURATE"
+mode: "FAST"
+top_k: 10
+default_user_id: "benchmark_user"
+
+# gRPC settings
+grpc_host: "${SYNAP_GRPC_HOST}"
+grpc_port: 443
+grpc_use_tls: true

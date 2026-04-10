@@ -1,0 +1,52 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Runtime artifacts
+data/
+results/
+checkpoints/
+logs/
+
+# Frontend
+.next/
+frontend/.next/
+frontend/.vite/
+frontend/node_modules/
+frontend/out/
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Lock files (optional — uncomment if you want to track them)
+# uv.lock
+# frontend/package-lock.json

@@ -1,0 +1,5 @@
+# Zep adapter configuration
+api_key: "${ZEP_API_KEY}"
+base_url: "https://api.getzep.com"
+top_k: 10
+user_id_prefix: "live-test-"

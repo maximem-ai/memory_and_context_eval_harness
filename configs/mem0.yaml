@@ -1,0 +1,7 @@
+# mem0 adapter configuration
+api_key: "${MEM0_API_KEY}"
+org_id: "${MEM0_ORG_ID}"
+project_id: "${MEM0_PROJECT_ID}"
+base_url: "https://api.mem0.ai/v2"
+top_k: 10
+model: "gpt-4o-mini"

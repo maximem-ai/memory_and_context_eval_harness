@@ -1,0 +1,41 @@
+# Multi-Dataset Orchestrator — OpenAI GPT-5-mini Evaluation
+# Uses same fetched contexts from best Gemini run (20260330_220511).
+# Only runs evaluation (answer + judge), no re-fetch.
+
+orchestrator:
+  adapter:
+    name: "synap"
+    module: "adapters.synap_adapter.SynapAdapter"
+    config_path: "./configs/synap.yaml"
+
+  llm:
+    model: "gpt-5-mini"
+    provider: "openai"
+    judge_model: "gpt-5-mini"
+    temperature: 0.0
+
+  agent_system_prompt_path: "./prompts/system_prompt.md"
+  agent_max_iterations: 5
+  eval_concurrency: 8
+  output_dir: "./results/orchestrator"
+  checkpoint_dir: "./checkpoints/orchestrator"
+
+pipelines:
+  longmemeval:
+    enabled: true
+    dataset: "longmemeval"
+    user_id: "longmemeval_bench_user"
+    ingestion_method: "longterm"
+    ingestion_buffer_seconds: 30
+    max_records: 0
+    max_questions: 0
+    retrieval_mode: "accurate"
+    retrieval_max_results: 20
+    warmup_delay_seconds: 10
+    batch_ingest: true
+    batch_size: 50
+    batch_delay_seconds: 2
+
+  scorers:
+    - "llm_judge"
+  run_after_completion: true

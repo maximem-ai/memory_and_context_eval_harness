@@ -1,0 +1,4 @@
+# Supermemory adapter configuration
+api_key: "${SUPERMEMORY_API_KEY}"
+base_url: "https://api.supermemory.ai"
+top_k: 10

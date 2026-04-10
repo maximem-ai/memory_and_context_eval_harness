@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev]
+        
+    - name: Run Unit Tests
+      run: |
+        pytest tests
+        
+    - name: Run Smoke Demo (CLI)
+      run: |
+        evl run --config examples/longmemeval_demo.yaml
+        
+    - name: Verify Artifacts
+      run: |
+        # Check if results directory was created and contains expected files
+        run_dir=$(ls -d results/run-*)
+        if [ -z "$run_dir" ]; then
+          echo "No run directory found"
+          exit 1
+        fi
+        
+        ls -l $run_dir
+        
+        if [ ! -f "$run_dir/metadata.json" ]; then exit 1; fi
+        if [ ! -f "$run_dir/predictions.jsonl" ]; then exit 1; fi
+        if [ ! -f "$run_dir/trace.json" ]; then exit 1; fi
+        if [ ! -f "$run_dir/metrics.csv" ]; then exit 1; fi

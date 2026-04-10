@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .card {
+    @apply bg-bg-surface border border-line rounded-lg p-5;
+  }
+
+  .card-hover {
+    @apply bg-bg-surface border border-line rounded-lg p-5 hover:border-line-hover transition-colors cursor-pointer;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-black hover:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-surface border border-line text-fg-secondary hover:text-fg hover:border-line-hover;
+  }
+
+  .btn-ghost {
+    @apply text-fg-secondary hover:text-fg hover:bg-bg-elevated;
+  }
+
+  .btn-danger {
+    @apply bg-red-600/10 text-red-400 hover:bg-red-600/20;
+  }
+
+  .input {
+    @apply bg-bg-elevated border border-line rounded px-3 py-2 text-sm text-fg focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-colors placeholder:text-fg-muted/50;
+  }
+
+  .select {
+    @apply bg-bg-elevated border border-line rounded px-3 py-2 text-sm text-fg focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none appearance-none transition-colors;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium;
+  }
+
+  .badge-success {
+    @apply bg-success/15 text-success;
+  }
+
+  .badge-error {
+    @apply bg-error/15 text-error;
+  }
+
+  .badge-warning {
+    @apply bg-warning/15 text-warning;
+  }
+
+  .badge-running {
+    @apply bg-accent/15 text-accent;
+  }
+
+  .badge-neutral {
+    @apply bg-bg-elevated text-fg-secondary;
+  }
+
+  .table-header {
+    @apply px-4 py-3 text-left text-xs font-medium text-fg-muted uppercase tracking-wider;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+  }
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(249, 115, 22, 0.3);
+  color: #ffffff;
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid rgba(249, 115, 22, 0.5);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #262626 #000000;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #0a0a0a 25%, #141414 50%, #0a0a0a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
