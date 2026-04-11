@@ -67,8 +67,15 @@ export const stopRun = (runId: string) => fetchApi<void>(`/api/runs/${encodeURIC
 export const startRun = (params: Record<string, any>) =>
   fetchApi<any>("/api/run", { method: "POST", body: JSON.stringify(params) })
 
-export const resetAndRerun = (runId: string, fromPhase: string) =>
-  fetchApi<any>(`/api/runs/${encodeURIComponent(runId)}/reset-phase`, { method: "POST", body: JSON.stringify({ from_phase: fromPhase }) })
+export const resetAndRerun = (runId: string, fromPhase: string, opts?: { judgeModel?: string; answeringModel?: string }) =>
+  fetchApi<any>(`/api/runs/${encodeURIComponent(runId)}/reset-phase`, {
+    method: "POST",
+    body: JSON.stringify({
+      from_phase: fromPhase,
+      judge_model: opts?.judgeModel,
+      answering_model: opts?.answeringModel,
+    }),
+  })
 
 // Providers & Benchmarks
 export const getProviders = () => fetchApi<string[]>("/api/providers")

@@ -18,6 +18,9 @@ export default function RunDetailPage() {
   const [run, setRun] = useState<any>(null)
   const [report, setReport] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [showModelPicker, setShowModelPicker] = useState<"answer" | "evaluate" | null>(null)
+  const [pickerJudge, setPickerJudge] = useState("")
+  const [pickerModel, setPickerModel] = useState("")
   const pollRef = useRef<NodeJS.Timeout | null>(null)
 
   const refresh = useCallback(async () => {
@@ -99,12 +102,12 @@ export default function RunDetailPage() {
             </button>
           )}
           {!isRunning && summary.evaluated > 0 && (
-            <button onClick={() => resetAndRerun(runId, "evaluate").catch(() => {}).finally(refresh)} className="btn btn-secondary text-xs">
+            <button onClick={() => { setShowModelPicker("evaluate"); setPickerJudge(run.judge || "gpt-4o"); setPickerModel(run.answeringModel || "gpt-4o") }} className="btn btn-secondary text-xs">
               Re-evaluate
             </button>
           )}
           {!isRunning && summary.answered > 0 && (
-            <button onClick={() => resetAndRerun(runId, "answer").catch(() => {}).finally(refresh)} className="btn btn-ghost text-xs">
+            <button onClick={() => { setShowModelPicker("answer"); setPickerJudge(run.judge || "gpt-4o"); setPickerModel(run.answeringModel || "gpt-4o") }} className="btn btn-ghost text-xs">
               Re-answer + Evaluate
             </button>
           )}
@@ -115,6 +118,47 @@ export default function RunDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Model picker for re-runs */}
+      {showModelPicker && (
+        <div className="mb-4 bg-bg-surface border border-line rounded-lg p-4 animate-fade-in">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-fg">
+              {showModelPicker === "evaluate" ? "Re-evaluate with different models" : "Re-answer + Evaluate with different models"}
+            </span>
+            <button onClick={() => setShowModelPicker(null)} className="text-fg-muted hover:text-fg text-xs">Cancel</button>
+          </div>
+          <div className="flex items-end gap-3">
+            {showModelPicker === "answer" && (
+              <div className="flex-1">
+                <label className="block text-xs text-fg-muted mb-1">Answering Model</label>
+                <select value={pickerModel} onChange={(e) => setPickerModel(e.target.value)} className="select w-full text-sm">
+                  {["gpt-4o", "gpt-4o-mini", "o4-mini", "gpt-5-mini", "gemini-2.5-flash", "gemini-2.5-pro"].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex-1">
+              <label className="block text-xs text-fg-muted mb-1">Judge Model</label>
+              <select value={pickerJudge} onChange={(e) => setPickerJudge(e.target.value)} className="select w-full text-sm">
+                {["gpt-4o", "gpt-4o-mini", "o4-mini", "gpt-5-mini", "gemini-2.5-flash", "gemini-2.5-pro"].map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => {
+                const opts = { judgeModel: pickerJudge, answeringModel: pickerModel }
+                resetAndRerun(runId, showModelPicker, opts).catch(() => {}).finally(() => { setShowModelPicker(null); refresh() })
+              }}
+              className="btn btn-primary text-xs whitespace-nowrap"
+            >
+              {showModelPicker === "evaluate" ? "Re-evaluate" : "Re-answer + Evaluate"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-6 text-sm text-fg-muted mb-6">
         <span>Provider: <strong className="text-fg capitalize">{run.provider}</strong></span>

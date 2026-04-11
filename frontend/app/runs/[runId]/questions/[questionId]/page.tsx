@@ -127,6 +127,19 @@ export default function QuestionDetailPage() {
                     {JSON.stringify(result, null, 2)}
                   </pre>
                 )}
+                {result.source_evidence && result.source_evidence.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-line/30">
+                    <div className="text-[10px] text-fg-muted mb-1">Source Evidence</div>
+                    {result.source_evidence.map((ev: any, j: number) => (
+                      <div key={j} className="text-fg-muted text-[11px] leading-relaxed mt-1 pl-2 border-l-2 border-accent/30">
+                        {typeof ev === "string" ? ev : JSON.stringify(ev)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {result.event_date && (
+                  <div className="mt-1 text-[10px] text-fg-muted">Event date: {result.event_date}</div>
+                )}
               </div>
             ))}
           </div>

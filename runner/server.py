@@ -183,8 +183,11 @@ async def start_run(body: Dict[str, Any]):
 
 @app.post("/api/runs/{run_id}/reset-phase")
 async def reset_and_rerun_phase(run_id: str, body: Dict[str, Any]):
-    """Reset a phase for all questions and re-run from that phase onward."""
+    """Reset a phase for all questions and re-run from that phase onward.
+    Optionally override judge_model and answering_model for the re-run."""
     from_phase = body.get("from_phase", "evaluate")
+    judge_model = body.get("judge_model")
+    answering_model = body.get("answering_model")
 
     checkpoint = orchestrator.checkpoint_mgr.load(run_id)
     if not checkpoint:
@@ -192,6 +195,13 @@ async def reset_and_rerun_phase(run_id: str, body: Dict[str, Any]):
 
     # Reset phases from the given phase onward
     orchestrator.checkpoint_mgr.reset_from_phase(checkpoint, from_phase)
+
+    # Update models if overridden
+    if judge_model:
+        checkpoint.judge = judge_model
+    if answering_model:
+        checkpoint.answering_model = answering_model
+
     orchestrator.checkpoint_mgr._save_sync(checkpoint)
 
     # Determine which phases to run

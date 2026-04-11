@@ -11,15 +11,16 @@ Question: {question}
 Gold Answer: {gold}
 Predicted Answer: {prediction}
 
-Score the prediction from 0.0 to 1.0 based on whether the KEY FACTUAL CONTENT of the gold answer is present in the prediction:
-- 1.0 = the prediction contains the key facts from the gold answer (even if it also includes extra information)
-- 0.7-0.9 = mostly correct, minor details missing or slightly different wording
-- 0.4-0.6 = partially correct, some key facts present but significant gaps
-- 0.1-0.3 = mostly wrong, but touches on the topic
-- 0.0 = completely wrong, irrelevant, or says "I don't know" when the gold answer has specific facts
+Score the prediction from 0.0 to 1.0 based on whether the KEY FACTUAL CONTENT of the gold answer is present ANYWHERE in the prediction — including in the reasoning, listed facts, key findings, or analysis sections, not just the final conclusion:
+- 1.0 = the gold answer's key facts appear anywhere in the prediction, even if the model also mentions other facts or picks a different final answer
+- 0.7-0.9 = the gold answer is partially referenced or paraphrased in the prediction
+- 0.4-0.6 = the prediction touches on the topic but the gold answer's key facts are vague or incomplete
+- 0.1-0.3 = the prediction is about the right topic but does not contain the gold answer's key facts
+- 0.0 = the prediction is completely wrong, irrelevant, or says "I don't know" and the gold answer is never mentioned
 
 IMPORTANT:
-- Do NOT penalize for extra information or verbose answers. Only check if the gold answer's key facts are present and correct in the prediction.
+- The prediction may list multiple facts or memories before giving a final answer. If the gold answer appears in ANY of those listed facts, score 1.0 — the system successfully retrieved and recognized the correct information.
+- Do NOT penalize for extra information, verbose answers, or choosing a different final answer when the correct one is also present.
 - If the gold answer lists alternate acceptable values (e.g. "X or Y"), the prediction is fully correct if it contains ANY of the accepted values.
 
 Respond with ONLY a compact single-line JSON object (no newlines):
