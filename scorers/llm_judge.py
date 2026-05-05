@@ -112,8 +112,11 @@ _QUESTION_TYPE_TO_PROMPT = {
     "abstention_evidence": _ADVERSARIAL_JUDGE_PROMPT,
 }
 
-_JUDGE_PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts", "judge.md")
+_PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+_JUDGE_PROMPT_PATH = os.path.join(_PROMPTS_DIR, "judge.md")
+_TEMPORAL_JUDGE_PROMPT_PATH = os.path.join(_PROMPTS_DIR, "judge_temporal.md")
 _judge_prompt_cache: str = None
+_temporal_judge_prompt_cache: str = None
 
 
 def _get_judge_prompt() -> str:
@@ -129,6 +132,21 @@ def _get_judge_prompt() -> str:
     else:
         _judge_prompt_cache = _DEFAULT_JUDGE_PROMPT
     return _judge_prompt_cache
+
+
+def _get_temporal_judge_prompt() -> str:
+    """Load temporal judge prompt from prompts/judge_temporal.md if it exists, otherwise use the hardcoded one."""
+    global _temporal_judge_prompt_cache
+    if _temporal_judge_prompt_cache is not None:
+        return _temporal_judge_prompt_cache
+
+    if os.path.exists(_TEMPORAL_JUDGE_PROMPT_PATH):
+        with open(_TEMPORAL_JUDGE_PROMPT_PATH, "r") as f:
+            _temporal_judge_prompt_cache = f.read().strip()
+        logger.info("Loaded temporal judge prompt from %s", _TEMPORAL_JUDGE_PROMPT_PATH)
+    else:
+        _temporal_judge_prompt_cache = _TEMPORAL_JUDGE_PROMPT
+    return _temporal_judge_prompt_cache
 
 
 def _is_reasoning_model(model: str) -> bool:
@@ -220,10 +238,30 @@ def _parse_score(text: str) -> Dict:
     return {"score": 0.0, "reason": f"Parse failed: {text[:80]}"}
 
 
-def _select_judge_prompt(question_type: str) -> str:
-    """Return the appropriate judge prompt template for the given question type."""
+_ABSTAIN_GOLD_VALUES = {
+    "", "unanswerable", "not mentioned", "not specified",
+    "not in the conversation", "no information", "unknown",
+}
+
+
+def _select_judge_prompt(question_type: str, gold: str = "") -> str:
+    """Return the appropriate judge prompt template for the given question type.
+
+    Special case: if the question is labeled adversarial/abstention but the gold
+    answer is concrete (e.g. binary "Yes"/"No"), use the default content-match
+    judge instead of the adversarial-abstain judge — the adversarial judge
+    incorrectly scores correct concrete answers as 0.0 because it requires
+    explicit refusal.
+    """
     if question_type:
         qt = question_type.lower().strip()
+        if qt in ("adversarial", "abstention_evidence"):
+            gold_norm = (gold or "").strip().lower()
+            if gold_norm and gold_norm not in _ABSTAIN_GOLD_VALUES:
+                # Concrete gold (e.g. "No") — fall through to default judge
+                return _get_judge_prompt()
+        if qt in ("temporal", "temporal-reasoning", "temporal_reasoning"):
+            return _get_temporal_judge_prompt()
         if qt in _QUESTION_TYPE_TO_PROMPT:
             return _QUESTION_TYPE_TO_PROMPT[qt]
     return _get_judge_prompt()
@@ -242,7 +280,7 @@ async def judge_single(
     knowledge-update, preference, adversarial); falls back to the default.
     """
     try:
-        prompt_template = _select_judge_prompt(question_type)
+        prompt_template = _select_judge_prompt(question_type, gold)
         text = await _llm_call(
             model,
             prompt_template.format(question=question, gold=gold, prediction=prediction),
@@ -445,7 +483,7 @@ def _compute_retrieval_metrics(
     Precision@K, F1@K, MRR, NDCG use MEMORY-ONLY relevance — because these
     measure the quality of the extracted/summarized items themselves.
 
-    Matches the reference implementation's computation for the memory-only metrics.
+    Matches MemoryBench's computation for the memory-only metrics.
     """
     import math
 
@@ -479,7 +517,7 @@ def _compute_retrieval_metrics(
     first_relevant = next((i for i, r in enumerate(mem) if r == 1), -1)
     mrr = round(1.0 / (first_relevant + 1), 4) if first_relevant >= 0 else 0.0
 
-    # NDCG: the reference platform places totalRelevant ones at the top as the ideal
+    # NDCG: MemoryBench places totalRelevant ones at the top as the ideal
     dcg = sum(r / math.log2(i + 2) for i, r in enumerate(mem))
     ideal_scores = [1 if i < min(total_relevant, len(mem)) else 0 for i in range(len(mem))]
     idcg = sum(r / math.log2(i + 2) for i, r in enumerate(ideal_scores))
@@ -570,7 +608,7 @@ async def judge_retrieval_quality(
     Selects a question-type-aware retrieval eval prompt:
     - preference / single-session-preference → contextual usefulness criterion
     - multi-session → contribution-to-synthesis criterion
-    - all others → direct factual relevance (the default)
+    - all others → direct factual relevance (MemoryBench default)
 
     Returns two sets of relevance flags:
     - memory relevance: used for Precision@K, F1@K, MRR, NDCG
