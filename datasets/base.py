@@ -1,9 +1,14 @@
-"""Benchmark factory — instantiate benchmark loaders by name."""
+"""
+Benchmark factory — instantiate benchmark loaders by name.
+"""
 
 from runner.types import Benchmark
 
+
 BENCHMARK_REGISTRY = {
+    "locomo": "datasets.locomo.benchmark.LoComoBenchmark",
     "longmemeval": "datasets.longmemeval.benchmark.LongMemEvalBenchmark",
+    "dmr": "datasets.dmr.benchmark.DMRBenchmark",
 }
 
 

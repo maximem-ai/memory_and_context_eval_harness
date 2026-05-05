@@ -14,6 +14,12 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -29,7 +35,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 COMPARISONS_DIR = os.path.join(DATA_DIR, "comparisons")
 LEADERBOARD_PATH = os.path.join(DATA_DIR, "leaderboard.json")
 
-app = FastAPI(title="Eval Harness API")
+app = FastAPI(title="Context Bench API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -100,6 +106,7 @@ async def start_ingest(body: Dict[str, Any]):
     benchmark = body.get("benchmark", "longmemeval")
     isolation_mode = body.get("isolation_mode", "global")
     container_tag_prefix = body.get("container_tag_prefix")
+    max_groups = body.get("max_groups")
 
     task_key = f"ingest-{provider}-{benchmark}"
     if task_key in _running_tasks and not _running_tasks[task_key].done():
@@ -107,7 +114,12 @@ async def start_ingest(body: Dict[str, Any]):
 
     async def _run():
         try:
-            await orchestrator.global_ingest(provider, benchmark, isolation_mode=isolation_mode, container_tag_prefix=container_tag_prefix)
+            await orchestrator.global_ingest(
+                provider, benchmark,
+                isolation_mode=isolation_mode,
+                container_tag_prefix=container_tag_prefix,
+                max_groups=max_groups,
+            )
         except Exception as e:
             logger.error("Ingest failed: %s", e)
             await ws_broadcast({"type": "ingest_error", "provider": provider, "benchmark": benchmark, "error": str(e)})
@@ -134,7 +146,7 @@ async def start_run(body: Dict[str, Any]):
     benchmark = body.get("benchmark", "longmemeval")
     judge = body.get("judge_model", "gpt-4o")
     model = body.get("answering_model", "gpt-4o")
-    run_id = body.get("run_id") or f"{provider}-{benchmark}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    run_id = body.get("run_id")
     force = body.get("force", False)
     phases = body.get("phases")
     limit = body.get("limit")
@@ -142,22 +154,49 @@ async def start_run(body: Dict[str, Any]):
     isolation_mode = body.get("isolation_mode", "global")
     retrieval_mode = body.get("retrieval_mode")
     container_tag_prefix = body.get("container_tag_prefix")
+    pipelined = bool(body.get("pipelined", False))
 
     # Build provider-specific config overrides
     provider_config = {}
     if retrieval_mode:
         provider_config["retrieval_mode"] = retrieval_mode
+    retrieval_max_results = body.get("retrieval_max_results")
+    if retrieval_max_results:
+        provider_config["retrieval_max_results"] = retrieval_max_results
 
-    sampling = SamplingConfig(mode="limit", limit=limit) if limit else None
+    max_per_group = body.get("max_per_group")
+    per_record_per_category = body.get("per_record_per_category")
+    groups = body.get("groups")  # list of group_ids to restrict to (e.g. ["locomo_1"])
+    if limit or max_per_group or per_record_per_category or groups:
+        sampling = SamplingConfig(
+            mode="limit",
+            limit=limit,
+            max_per_group=max_per_group,
+            per_record_per_category=per_record_per_category,
+            groups=groups,
+        )
+    else:
+        sampling = None
     concurrency_val = body.get("concurrency")
-    concurrency = ConcurrencyConfig(default=concurrency_val) if concurrency_val else None
+    search_conc = body.get("search_concurrency")
+    answer_conc = body.get("answer_concurrency")
+    evaluate_conc = body.get("evaluate_concurrency")
+    if concurrency_val or search_conc or answer_conc or evaluate_conc:
+        concurrency = ConcurrencyConfig(
+            default=concurrency_val or 1,
+            search=search_conc,
+            answer=answer_conc,
+            evaluate=evaluate_conc,
+        )
+    else:
+        concurrency = None
 
     # Clean up finished tasks before checking
     for k in list(_running_tasks):
         if _running_tasks[k].done():
             del _running_tasks[k]
 
-    task_key = f"run-{run_id}"
+    task_key = f"run-{provider}-{benchmark}-{run_id or datetime.now().strftime('%H%M%S')}"
     if task_key in _running_tasks and not _running_tasks[task_key].done():
         return JSONResponse({"error": "Run already in progress"}, status_code=409)
 
@@ -172,22 +211,20 @@ async def start_run(body: Dict[str, Any]):
                 provider_config=provider_config or None,
                 container_tag_prefix=container_tag_prefix,
                 force=force,
+                pipelined=pipelined,
             )
         except Exception as e:
             logger.error("Run failed: %s", e)
             await ws_broadcast({"type": "run_error", "provider": provider, "benchmark": benchmark, "error": str(e)})
 
     _running_tasks[task_key] = asyncio.create_task(_run())
-    return {"started": True, "runId": run_id, "provider": provider, "benchmark": benchmark, "isolationMode": isolation_mode}
+    return {"started": True, "provider": provider, "benchmark": benchmark, "isolationMode": isolation_mode}
 
 
 @app.post("/api/runs/{run_id}/reset-phase")
 async def reset_and_rerun_phase(run_id: str, body: Dict[str, Any]):
-    """Reset a phase for all questions and re-run from that phase onward.
-    Optionally override judge_model and answering_model for the re-run."""
+    """Reset a phase for all questions and re-run from that phase onward."""
     from_phase = body.get("from_phase", "evaluate")
-    judge_model = body.get("judge_model")
-    answering_model = body.get("answering_model")
 
     checkpoint = orchestrator.checkpoint_mgr.load(run_id)
     if not checkpoint:
@@ -195,13 +232,6 @@ async def reset_and_rerun_phase(run_id: str, body: Dict[str, Any]):
 
     # Reset phases from the given phase onward
     orchestrator.checkpoint_mgr.reset_from_phase(checkpoint, from_phase)
-
-    # Update models if overridden
-    if judge_model:
-        checkpoint.judge = judge_model
-    if answering_model:
-        checkpoint.answering_model = answering_model
-
     orchestrator.checkpoint_mgr._save_sync(checkpoint)
 
     # Determine which phases to run
@@ -620,8 +650,8 @@ if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8766, with_frontend: bool = False):
-    """Start the server. Use --with-frontend to also start the Next.js dev server."""
+def run_server(host: str = "0.0.0.0", port: int = 8766):
+    """Start the server."""
     try:
         from dotenv import load_dotenv
         load_dotenv()
@@ -634,31 +664,9 @@ def run_server(host: str = "0.0.0.0", port: int = 8766, with_frontend: bool = Fa
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
-
-    if with_frontend:
-        import subprocess
-        import webbrowser
-        import threading
-        frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
-        if os.path.exists(os.path.join(frontend_dir, "package.json")):
-            logger.info("Starting frontend dev server from %s", frontend_dir)
-            subprocess.Popen(
-                ["npm", "run", "dev"],
-                cwd=frontend_dir,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            threading.Timer(3.0, lambda: webbrowser.open("http://localhost:3000")).start()
-
-    logger.info("Starting Eval Harness server on %s:%d", host, port)
+    logger.info("Starting Context Bench server on %s:%d", host, port)
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8766)
-    parser.add_argument("--with-frontend", action="store_true", help="Also start the Next.js frontend and open browser")
-    args = parser.parse_args()
-    run_server(host=args.host, port=args.port, with_frontend=args.with_frontend)
+    run_server()

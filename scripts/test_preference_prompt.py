@@ -5,7 +5,7 @@ Loads the 8 preference questions from the checkpoint (same fetched contexts as t
 runs the answer LLM with the current system prompt, and displays predictions vs gold answers.
 
 Usage:
-    python scripts/test_preference_prompt.py                          # uses prompts/system_prompt.md
+    python scripts/test_preference_prompt.py                          # uses prompts/qa_agent.md
     python scripts/test_preference_prompt.py --prompt path/to/alt.md  # test an alternative prompt
     python scripts/test_preference_prompt.py --model gpt-4o           # override model
     python scripts/test_preference_prompt.py --question 32260d93      # run only one question (partial ID match)
@@ -27,7 +27,7 @@ load_dotenv()
 
 CHECKPOINT_PATH = "checkpoints/orchestrator/longmemeval.json"
 DATASET_PATH = "datasets/longmemeval/longmemeval_109_answerable.json"
-DEFAULT_PROMPT_PATH = "prompts/system_prompt.md"
+DEFAULT_PROMPT_PATH = "prompts/qa_agent.md"
 DEFAULT_MODEL = "gpt-5-mini"
 
 

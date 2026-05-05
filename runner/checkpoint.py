@@ -100,6 +100,7 @@ class CheckpointManager:
         sampling: Optional[SamplingConfig] = None,
         concurrency: Optional[ConcurrencyConfig] = None,
         target_question_ids: Optional[List[str]] = None,
+        provider_config: Optional[Dict[str, Any]] = None,
     ) -> RunCheckpoint:
         """Create a new run checkpoint."""
         now = _now_iso()
@@ -117,6 +118,7 @@ class CheckpointManager:
             sampling=sampling,
             concurrency=concurrency,
             target_question_ids=target_question_ids,
+            provider_config=provider_config,
         )
         self._save_sync(cp)
         return cp
@@ -397,6 +399,8 @@ class CheckpointManager:
             cp.sampling = SamplingConfig(**data["sampling"])
         if data.get("concurrency"):
             cp.concurrency = ConcurrencyConfig(**data["concurrency"])
+        if data.get("provider_config"):
+            cp.provider_config = data["provider_config"]
 
         for qid, qdata in data.get("questions", {}).items():
             phases = qdata.get("phases", {})

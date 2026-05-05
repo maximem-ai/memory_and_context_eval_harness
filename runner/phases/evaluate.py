@@ -4,6 +4,7 @@ Evaluate Phase — score hypotheses against ground truth + compute retrieval met
 Runs judge_single() and judge_retrieval_quality() in parallel for ALL benchmarks.
 """
 
+import asyncio
 import logging
 import time
 from typing import Any, Callable, Dict, List, Optional
@@ -21,6 +22,94 @@ from runner.concurrent import execute_concurrent
 logger = logging.getLogger(__name__)
 
 
+async def evaluate_one(
+    question_id: str,
+    benchmark: Benchmark,
+    checkpoint: RunCheckpoint,
+    checkpoint_mgr: CheckpointManager,
+    judge_model: str,
+    provider: Optional[Provider] = None,
+    on_progress: Optional[Callable[[Dict[str, Any]], None]] = None,
+) -> Dict[str, Any]:
+    """Score a single question's hypothesis and persist results."""
+    qcp = checkpoint.questions[question_id]
+    t0 = time.monotonic()
+
+    checkpoint_mgr.update_evaluate_phase(
+        checkpoint, question_id, status="in_progress",
+        started_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+    try:
+        answer_phase = qcp.phases.get("answer", {})
+        hypothesis = (
+            answer_phase.get("hypothesis") if isinstance(answer_phase, dict)
+            else getattr(answer_phase, "hypothesis", "")
+        ) or ""
+
+        search_data = checkpoint_mgr.load_search_results(checkpoint.run_id, question_id)
+        search_results = search_data.get("results", []) if search_data else []
+
+        judge_task = asyncio.create_task(
+            _run_judge(
+                qcp.question, qcp.ground_truth, hypothesis,
+                qcp.question_type, judge_model,
+            )
+        )
+        retrieval_task = asyncio.create_task(
+            _run_retrieval_eval(
+                qcp.question, qcp.ground_truth, search_results,
+                qcp.question_type, judge_model,
+            )
+        )
+
+        judge_result, retrieval_metrics = await asyncio.gather(judge_task, retrieval_task)
+        duration_ms = round((time.monotonic() - t0) * 1000, 1)
+
+        score = judge_result.get("score", 0)
+        label = "correct" if score >= 0.5 else "incorrect"
+
+        checkpoint_mgr.update_evaluate_phase(
+            checkpoint, question_id,
+            status="completed",
+            score=score,
+            label=label,
+            explanation=judge_result.get("explanation", ""),
+            retrieval_metrics=retrieval_metrics,
+            duration_ms=duration_ms,
+            completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        )
+        await checkpoint_mgr.save(checkpoint)
+
+        if on_progress:
+            on_progress({
+                "type": "evaluate_complete",
+                "question_id": question_id,
+                "score": score,
+                "label": label,
+                "duration_ms": duration_ms,
+            })
+
+        return {
+            "question_id": question_id,
+            "score": score,
+            "label": label,
+            "duration_ms": duration_ms,
+        }
+
+    except Exception as e:
+        duration_ms = round((time.monotonic() - t0) * 1000, 1)
+        checkpoint_mgr.update_evaluate_phase(
+            checkpoint, question_id,
+            status="failed",
+            error=str(e),
+            duration_ms=duration_ms,
+        )
+        await checkpoint_mgr.save(checkpoint)
+        logger.error("[evaluate] Question %s failed: %s", question_id, e)
+        return {"question_id": question_id, "error": str(e)}
+
+
 async def run_evaluate_phase(
     benchmark: Benchmark,
     checkpoint: RunCheckpoint,
@@ -29,7 +118,7 @@ async def run_evaluate_phase(
     provider: Optional[Provider] = None,
     on_progress: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> None:
-    """Run the evaluate phase for all questions with completed answers."""
+    """Run the evaluate phase for all questions with completed answers (serial-phase mode)."""
     pending = [
         qid for qid, qcp in checkpoint.questions.items()
         if (
@@ -49,89 +138,13 @@ async def run_evaluate_phase(
     )
     logger.info("[evaluate] Evaluating %d questions (judge=%s, concurrency=%d)", len(pending), judge_model, concurrency)
 
-    async def evaluate_one(question_id: str, index: int) -> Dict[str, Any]:
-        qcp = checkpoint.questions[question_id]
-        t0 = time.monotonic()
-
-        checkpoint_mgr.update_evaluate_phase(
-            checkpoint, question_id, status="in_progress",
-            started_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    async def _wrap(question_id: str, index: int) -> Dict[str, Any]:
+        return await evaluate_one(
+            question_id, benchmark, checkpoint, checkpoint_mgr,
+            judge_model, provider, on_progress,
         )
 
-        try:
-            # Get hypothesis from answer phase
-            answer_phase = qcp.phases.get("answer", {})
-            hypothesis = (
-                answer_phase.get("hypothesis") if isinstance(answer_phase, dict)
-                else getattr(answer_phase, "hypothesis", "")
-            ) or ""
-
-            # Load search results for retrieval eval
-            search_data = checkpoint_mgr.load_search_results(checkpoint.run_id, question_id)
-            search_results = search_data.get("results", []) if search_data else []
-
-            # Run judge + retrieval eval in parallel
-            import asyncio
-            judge_task = asyncio.create_task(
-                _run_judge(
-                    qcp.question, qcp.ground_truth, hypothesis,
-                    qcp.question_type, judge_model,
-                )
-            )
-            retrieval_task = asyncio.create_task(
-                _run_retrieval_eval(
-                    qcp.question, qcp.ground_truth, search_results,
-                    qcp.question_type, judge_model,
-                )
-            )
-
-            judge_result, retrieval_metrics = await asyncio.gather(judge_task, retrieval_task)
-            duration_ms = round((time.monotonic() - t0) * 1000, 1)
-
-            score = judge_result.get("score", 0)
-            label = "correct" if score >= 0.5 else "incorrect"
-
-            checkpoint_mgr.update_evaluate_phase(
-                checkpoint, question_id,
-                status="completed",
-                score=score,
-                label=label,
-                explanation=judge_result.get("explanation", ""),
-                retrieval_metrics=retrieval_metrics,
-                duration_ms=duration_ms,
-                completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            )
-            await checkpoint_mgr.save(checkpoint)
-
-            if on_progress:
-                on_progress({
-                    "type": "evaluate_complete",
-                    "question_id": question_id,
-                    "score": score,
-                    "label": label,
-                    "duration_ms": duration_ms,
-                })
-
-            return {
-                "question_id": question_id,
-                "score": score,
-                "label": label,
-                "duration_ms": duration_ms,
-            }
-
-        except Exception as e:
-            duration_ms = round((time.monotonic() - t0) * 1000, 1)
-            checkpoint_mgr.update_evaluate_phase(
-                checkpoint, question_id,
-                status="failed",
-                error=str(e),
-                duration_ms=duration_ms,
-            )
-            await checkpoint_mgr.save(checkpoint)
-            logger.error("[evaluate] Question %s failed: %s", question_id, e)
-            return {"question_id": question_id, "error": str(e)}
-
-    await execute_concurrent(pending, concurrency, "evaluate", evaluate_one)
+    await execute_concurrent(pending, concurrency, "evaluate", _wrap)
 
 
 async def _run_judge(

@@ -126,11 +126,11 @@ Results are saved to disk so answer+evaluate can re-run without re-searching.
 ```
 for each question:
   ├─ Load search results from disk
-  ├─ Build prompt: system_prompt.md + question + ranked context
+  ├─ Build prompt: qa_agent.md + question + ranked context
   ├─ Call LLM (GPT-4o, GPT-5-mini, Gemini, etc.)
   └─ Store hypothesis in checkpoint
 
-System prompt: prompts/system_prompt.md (handles memory vs evidence conflicts,
+System prompt: prompts/qa_agent.md (handles memory vs evidence conflicts,
   knowledge updates, counting, preferences, grounding rules).
 ```
 

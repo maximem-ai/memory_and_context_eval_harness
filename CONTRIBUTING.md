@@ -44,7 +44,7 @@ scorers/             Evaluation logic
   llm_judge.py       5 judge prompts + retrieval quality eval
 
 prompts/             System prompts
-  system_prompt.md   Default answering prompt
+  qa_agent.md   Default answering prompt
   judge.md           Judge prompt override
 
 frontend/            Next.js 15 dashboard
@@ -234,7 +234,7 @@ Understanding the pipeline helps when debugging or extending:
               Checkpoint: per-question search status
 
 3. ANSWER     Load search results → build prompt → call LLM
-              System prompt: prompts/system_prompt.md
+              System prompt: prompts/qa_agent.md
               Checkpoint: stores hypothesis per question
 
 4. EVALUATE   Two parallel evaluations per question:

@@ -23,10 +23,12 @@ from runner.concurrent import execute_concurrent
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SYSTEM_PROMPT_PATH = os.path.join(
+PROMPTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "prompts", "system_prompt.md",
+    "prompts",
 )
+DEFAULT_SYSTEM_PROMPT_PATH = os.path.join(PROMPTS_DIR, "qa_agent.md")
+LEGACY_DEFAULT_SYSTEM_PROMPT_PATH = os.path.join(PROMPTS_DIR, "locomo_agent.md")
 
 DEFAULT_ANSWER_TEMPLATE = """Question: {question}
 Question Date: {question_date}
@@ -37,14 +39,91 @@ Retrieved Context (raw JSON from memory provider):
 Answer:"""
 
 
-def _load_default_system_prompt() -> str:
-    """Load prompts/system_prompt.md as the default system prompt."""
+def _load_default_system_prompt(benchmark_name: str = "") -> str:
+    """Load the answer system prompt for the given benchmark.
+
+    Lookup order:
+    1. prompts/{benchmark_name}_agent.md  — per-benchmark prompt if it exists
+    2. prompts/qa_agent.md                — shared default
+    3. prompts/locomo_agent.md            — legacy fallback (pre-rename)
+    4. hardcoded one-line fallback
+    """
+    candidates = []
+    if benchmark_name:
+        candidates.append(os.path.join(PROMPTS_DIR, f"{benchmark_name}_agent.md"))
+    candidates += [DEFAULT_SYSTEM_PROMPT_PATH, LEGACY_DEFAULT_SYSTEM_PROMPT_PATH]
+
+    for path in candidates:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return f.read().strip()
+    logger.warning("No default system prompt found in %s", PROMPTS_DIR)
+    return "You are a helpful assistant with access to conversation memory."
+
+
+async def answer_one(
+    question_id: str,
+    benchmark: Benchmark,
+    checkpoint: RunCheckpoint,
+    checkpoint_mgr: CheckpointManager,
+    answering_model: str,
+    system_prompt: str = "",
+    provider: Optional[Provider] = None,
+    on_progress: Optional[Callable[[Dict[str, Any]], None]] = None,
+) -> Dict[str, Any]:
+    """Generate the hypothesis for a single question and persist it."""
+    qcp = checkpoint.questions[question_id]
+    t0 = time.monotonic()
+
+    checkpoint_mgr.update_answer_phase(
+        checkpoint, question_id, status="in_progress",
+        started_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
     try:
-        with open(DEFAULT_SYSTEM_PROMPT_PATH, "r") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        logger.warning("Default system prompt not found at %s", DEFAULT_SYSTEM_PROMPT_PATH)
-        return "You are a helpful assistant with access to conversation memory."
+        search_data = checkpoint_mgr.load_search_results(checkpoint.run_id, question_id)
+        results = search_data.get("results", []) if search_data else []
+
+        prompt = _build_answer_prompt(
+            qcp.question,
+            results,
+            qcp.question_date,
+            provider,
+            system_prompt,
+        )
+
+        hypothesis = await _call_llm(prompt, answering_model, system_prompt)
+        duration_ms = round((time.monotonic() - t0) * 1000, 1)
+
+        checkpoint_mgr.update_answer_phase(
+            checkpoint, question_id,
+            status="completed",
+            hypothesis=hypothesis,
+            duration_ms=duration_ms,
+            completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        )
+        await checkpoint_mgr.save(checkpoint)
+
+        if on_progress:
+            on_progress({
+                "type": "answer_complete",
+                "question_id": question_id,
+                "duration_ms": duration_ms,
+            })
+
+        return {"question_id": question_id, "duration_ms": duration_ms}
+
+    except Exception as e:
+        duration_ms = round((time.monotonic() - t0) * 1000, 1)
+        checkpoint_mgr.update_answer_phase(
+            checkpoint, question_id,
+            status="failed",
+            error=str(e),
+            duration_ms=duration_ms,
+        )
+        await checkpoint_mgr.save(checkpoint)
+        logger.error("[answer] Question %s failed: %s", question_id, e)
+        return {"question_id": question_id, "error": str(e)}
 
 
 async def run_answer_phase(
@@ -56,10 +135,9 @@ async def run_answer_phase(
     provider: Optional[Provider] = None,
     on_progress: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> None:
-    """Run the answer phase for all questions with completed search."""
-    # Load default system prompt from prompts/system_prompt.md if none provided
+    """Run the answer phase for all questions with completed search (serial-phase mode)."""
     if not system_prompt:
-        system_prompt = _load_default_system_prompt()
+        system_prompt = _load_default_system_prompt(getattr(benchmark, "name", ""))
 
     pending = [
         qid for qid, qcp in checkpoint.questions.items()
@@ -80,64 +158,13 @@ async def run_answer_phase(
     )
     logger.info("[answer] Answering %d questions (model=%s, concurrency=%d)", len(pending), answering_model, concurrency)
 
-    async def answer_one(question_id: str, index: int) -> Dict[str, Any]:
-        qcp = checkpoint.questions[question_id]
-        t0 = time.monotonic()
-
-        checkpoint_mgr.update_answer_phase(
-            checkpoint, question_id, status="in_progress",
-            started_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    async def _wrap(question_id: str, index: int) -> Dict[str, Any]:
+        return await answer_one(
+            question_id, benchmark, checkpoint, checkpoint_mgr,
+            answering_model, system_prompt, provider, on_progress,
         )
 
-        try:
-            # Load search results from disk
-            search_data = checkpoint_mgr.load_search_results(checkpoint.run_id, question_id)
-            results = search_data.get("results", []) if search_data else []
-
-            # Build prompt
-            prompt = _build_answer_prompt(
-                qcp.question,
-                results,
-                qcp.question_date,
-                provider,
-                system_prompt,
-            )
-
-            # Call LLM
-            hypothesis = await _call_llm(prompt, answering_model, system_prompt)
-            duration_ms = round((time.monotonic() - t0) * 1000, 1)
-
-            checkpoint_mgr.update_answer_phase(
-                checkpoint, question_id,
-                status="completed",
-                hypothesis=hypothesis,
-                duration_ms=duration_ms,
-                completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            )
-            await checkpoint_mgr.save(checkpoint)
-
-            if on_progress:
-                on_progress({
-                    "type": "answer_complete",
-                    "question_id": question_id,
-                    "duration_ms": duration_ms,
-                })
-
-            return {"question_id": question_id, "duration_ms": duration_ms}
-
-        except Exception as e:
-            duration_ms = round((time.monotonic() - t0) * 1000, 1)
-            checkpoint_mgr.update_answer_phase(
-                checkpoint, question_id,
-                status="failed",
-                error=str(e),
-                duration_ms=duration_ms,
-            )
-            await checkpoint_mgr.save(checkpoint)
-            logger.error("[answer] Question %s failed: %s", question_id, e)
-            return {"question_id": question_id, "error": str(e)}
-
-    await execute_concurrent(pending, concurrency, "answer", answer_one)
+    await execute_concurrent(pending, concurrency, "answer", _wrap)
 
 
 def _build_answer_prompt(
@@ -148,18 +175,15 @@ def _build_answer_prompt(
     system_prompt: str,
 ) -> str:
     """Build the answer prompt, using provider custom prompt if available."""
-    # Check for provider custom prompt
     if provider and provider.prompts and provider.prompts.answer_prompt:
         ap = provider.prompts.answer_prompt
         if callable(ap):
             return ap(question, search_results, question_date)
-        # String template
         context_str = build_context_string(search_results)
         return ap.replace("{question}", question).replace(
             "{context}", context_str
         ).replace("{question_date}", question_date or "N/A")
 
-    # Default prompt (system prompt is sent separately as system message)
     context_str = build_context_string(search_results)
     return DEFAULT_ANSWER_TEMPLATE.format(
         question=question,

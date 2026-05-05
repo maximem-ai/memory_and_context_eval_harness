@@ -275,6 +275,9 @@ class SamplingConfig:
     limit: Optional[int] = None
     records: Optional[int] = None
     sessions_per_question: Optional[int] = None
+    max_per_group: Optional[int] = None  # First N questions per haystack group (record for Locomo/DMR)
+    per_record_per_category: Optional[int] = None  # First N questions per (group, question_type) cell — strict 2D stratification
+    groups: Optional[List[str]] = None  # Restrict to specific haystack-group ids (e.g. ["locomo_1"])
 
 
 @dataclass
@@ -293,6 +296,7 @@ class RunCheckpoint:
     sampling: Optional[SamplingConfig] = None
     target_question_ids: Optional[List[str]] = None
     concurrency: Optional[ConcurrencyConfig] = None
+    provider_config: Optional[Dict[str, Any]] = None  # captures retrieval_mode, retrieval_max_results, etc.
     questions: Dict[str, QuestionCheckpoint] = field(default_factory=dict)
 
 
@@ -462,6 +466,15 @@ class Benchmark(ABC):
     @abstractmethod
     def get_question_types(self) -> QuestionTypeRegistry:
         ...
+
+    def get_question_group_id(self, question_id: str) -> str:
+        """Group questions that share the same haystack so isolated mode
+        ingests once per group, not once per question. Default: per-question
+        (one group per question, suitable when haystacks are independent like
+        LongMemEval). Override for benchmarks where multiple questions share
+        a haystack (Locomo, DMR — group by record prefix).
+        """
+        return question_id
 
 
 # ── Provider Interface ─────────────────────────────────────────────────

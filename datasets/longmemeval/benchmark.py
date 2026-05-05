@@ -72,13 +72,17 @@ class LongMemEvalBenchmark(Benchmark):
         # Build UnifiedSession objects from session_data
         for sid, sdata in session_data.items():
             messages = []
+            session_timestamp = None
             for turn in sdata.get("turns", []):
                 role = "user" if turn["speaker"] == "user" else "assistant"
+                ts = turn.get("metadata", {}).get("timestamp")
+                if session_timestamp is None and ts:
+                    session_timestamp = ts
                 messages.append(
                     UnifiedMessage(
                         role=role,
                         content=turn["text"],
-                        timestamp=turn.get("metadata", {}).get("timestamp"),
+                        timestamp=ts,
                     )
                 )
             self._sessions[sid] = UnifiedSession(
@@ -86,6 +90,7 @@ class LongMemEvalBenchmark(Benchmark):
                 messages=messages,
                 metadata={
                     "session_name": sdata.get("name", f"Session {sid}"),
+                    "timestamp": session_timestamp,
                 },
             )
 
