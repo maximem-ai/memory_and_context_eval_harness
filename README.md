@@ -35,7 +35,19 @@ Dataset ──> Ingest ──> Search ──> Answer ──> Evaluate ──> Re
 | Benchmark | Questions | Sessions | Focus |
 |-----------|-----------|----------|-------|
 | [LongMemEval](https://arxiv.org/abs/2407.01501) | 500 | 940 | Long-term memory across sessions |
+| [LoCoMo](https://snap-research.github.io/locomo/) | 1,540 | 5,290 | Multi-conversation, multi-modal, very long context |
 | **Custom** | Implement `Benchmark` ABC | See [Adding Benchmarks](#adding-a-benchmark) |
+
+## Headline Results
+
+Run with `gpt-5` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, 5-seed mean), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper).
+
+| Benchmark | Provider | Cat 1-4 |
+|---|---|---|
+| LoCoMo | [Synap](https://maximem.ai) | **93.2%** |
+| LongMemEval (50q) | [Synap](https://maximem.ai) | **92.0%** (also reproduced on mem0's `memory-benchmarks` harness after `_flatten_context` fix lands) |
+
+See [docs/methodology.md](docs/methodology.md) (TBD) for run configuration, retrieval mode, and reproducibility notes.
 
 ## Quickstart
 

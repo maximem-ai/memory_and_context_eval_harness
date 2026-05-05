@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download LongMemEval benchmark dataset."""
+"""Download LoCoMo and LongMemEval benchmark datasets."""
 
 import argparse
 import os
@@ -9,6 +9,13 @@ import urllib.request
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DATASETS = {
+    "locomo": [
+        {
+            "url": "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json",
+            "dest": os.path.join(_ROOT, "datasets", "locomo", "locomo10.json"),
+            "label": "LoCoMo (locomo10.json)",
+        }
+    ],
     "longmemeval": {
         "oracle": {
             "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_oracle.json",
@@ -60,6 +67,13 @@ def download_file(url: str, dest: str, label: str, force: bool = False):
         sys.exit(1)
 
 
+def download_locomo(force: bool):
+    print("LoCoMo dataset:")
+    for entry in DATASETS["locomo"]:
+        download_file(entry["url"], entry["dest"], entry["label"], force)
+
+
+
 def download_longmemeval(variant: str, force: bool):
     print("LongMemEval dataset:")
     entry = DATASETS["longmemeval"][variant]
@@ -68,6 +82,12 @@ def download_longmemeval(variant: str, force: bool):
 
 def main():
     parser = argparse.ArgumentParser(description="Download benchmark datasets")
+    parser.add_argument(
+        "--dataset",
+        choices=["locomo", "longmemeval",  "all"],
+        default="all",
+        help="Which dataset to download (default: all)",
+    )
     parser.add_argument(
         "--variant",
         choices=["oracle", "s", "m"],
@@ -80,7 +100,12 @@ def main():
         help="Re-download even if file already exists",
     )
     args = parser.parse_args()
-    download_longmemeval(args.variant, args.force)
+
+    if args.dataset in ("locomo", "all"):
+        download_locomo(args.force)
+    if args.dataset in ("longmemeval", "all"):
+        download_longmemeval(args.variant, args.force)
+
     print("\nDone!")
 
 

@@ -1,11 +1,9 @@
-# Multi-Dataset Orchestrator — OpenAI GPT-4o Evaluation
-# Uses same fetched contexts from best Gemini run (20260330_220511).
-# Only runs evaluation (answer + judge), no re-fetch.
+# Synap Orchestrator — gpt-4o answer + judge model
 
 orchestrator:
   adapter:
     name: "synap"
-    module: "adapters.synap_adapter.SynapAdapter"
+    module: "adapters.synap_adapter.SynapProvider"
     config_path: "./configs/synap.yaml"
 
   llm:
@@ -14,9 +12,8 @@ orchestrator:
     judge_model: "gpt-4o"
     temperature: 0.0
 
-  agent_system_prompt_path: "./prompts/system_prompt.md"
   agent_max_iterations: 5
-  eval_concurrency: 8
+  eval_concurrency: 3
   output_dir: "./results/orchestrator"
   checkpoint_dir: "./checkpoints/orchestrator"
 
@@ -29,13 +26,25 @@ pipelines:
     ingestion_buffer_seconds: 30
     max_records: 0
     max_questions: 0
-    retrieval_mode: "accurate"
-    retrieval_max_results: 20
-    warmup_delay_seconds: 10
+    retrieval_mode: "fast"
+    retrieval_max_results: 100
     batch_ingest: true
     batch_size: 50
-    batch_delay_seconds: 2
 
+  locomo:
+    enabled: false
+    dataset: "locomo"
+    user_id: "locomo_bench_user"
+    ingestion_method: "longterm"
+    ingestion_buffer_seconds: 30
+    max_records: 0
+    max_questions: 0
+    retrieval_mode: "fast"
+    retrieval_max_results: 100
+    batch_ingest: true
+    batch_size: 50
+
+scoring:
   scorers:
     - "llm_judge"
   run_after_completion: true
