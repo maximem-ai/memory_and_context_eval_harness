@@ -9,15 +9,16 @@ Uses:
   - sdk.memories.delete()            for deletion
   - sdk.cache.clear()                for clear
 
-Requires env vars: SYNAP_INSTANCE_ID, SYNAP_BOOTSTRAP_TOKEN (first run),
-and optionally SYNAP_BASE_URL.
+Requires env vars: SYNAP_API_KEY, and optionally SYNAP_INSTANCE_ID, SYNAP_BASE_URL.
 
 All methods are async — no _AsyncBridge needed.
 """
 
 import asyncio
 import logging
+import re
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from adapters.base_adapter import (
@@ -44,8 +45,8 @@ class SynapProvider(Provider):
 
     def __init__(self):
         self._sdk = None
+        self.api_key = ""
         self.instance_id = ""
-        self.bootstrap_token = ""
         self.base_url = ""
         self.grpc_host = ""
         self.grpc_port = 0
@@ -64,8 +65,8 @@ class SynapProvider(Provider):
     async def initialize(self, config: ProviderConfig) -> None:
         from maximem_synap import MaximemSynapSDK, SDKConfig
 
+        self.api_key = config.api_key or config.extras.get("api_key", "")
         self.instance_id = config.extras.get("instance_id", "")
-        self.bootstrap_token = config.extras.get("bootstrap_token", "")
         self.base_url = config.base_url or config.extras.get("base_url", "")
         self.grpc_host = config.extras.get("grpc_host", "")
         self.grpc_port = config.extras.get("grpc_port", 0)
@@ -74,8 +75,8 @@ class SynapProvider(Provider):
         self.top_k = config.extras.get("top_k", 10)
         self._config_extras = config.extras
 
-        if not self.instance_id:
-            raise ValueError("SYNAP_INSTANCE_ID is required")
+        if not self.api_key:
+            raise ValueError("SYNAP_API_KEY is required (set via config or env var)")
 
         sdk_config = SDKConfig(
             api_base_url=self.base_url or None,
@@ -85,8 +86,8 @@ class SynapProvider(Provider):
         )
 
         sdk = MaximemSynapSDK(
-            instance_id=self.instance_id,
-            bootstrap_token=self.bootstrap_token or None,
+            api_key=self.api_key,
+            instance_id=self.instance_id or None,
             config=sdk_config,
         )
 
@@ -104,12 +105,6 @@ class SynapProvider(Provider):
         except Exception as e:
             logger.warning("Synap gRPC listen failed (falling back to REST): %s", e)
 
-        # Clear local cache
-        try:
-            self._sdk.cache.clear()
-        except Exception as e:
-            logger.warning("Synap cache clear on init failed: %s", e)
-
         logger.info("Synap provider initialised (real SDK — %s mode, TLS=%s)", self.mode, self.grpc_use_tls)
 
     async def ingest(
@@ -125,20 +120,33 @@ class SynapProvider(Provider):
             transcript = self._format_session(session)
             meta = dict(session.metadata or {})
             uid = options.container_tag
-            cid = meta.get("customer_id", uid)
             doc_id = f"longterm:{session.session_id}"
 
-            create_kwargs = dict(
+            create_kwargs: Dict[str, Any] = dict(
                 document=transcript,
                 document_type="ai-chat-conversation",
                 document_id=doc_id,
                 user_id=uid,
-                customer_id=cid,
+                # Pydantic-required on the SDK model. For B2C instances the
+                # server auto-resolves from user_id, so the value sent is
+                # effectively ignored — passing user_id keeps it stable.
+                customer_id=uid,
                 mode="long-range",
                 metadata={"session_id": session.session_id, **meta},
             )
-            if meta.get("document_created_at"):
-                create_kwargs["document_created_at"] = meta["document_created_at"]
+
+            # Document Created Time: prefer explicit document_created_at, then
+            # session-level timestamp (Locomo, LongMemEval), then options
+            # override. Parse human-readable strings to datetime.
+            dct_raw = (
+                (options.metadata or {}).get("document_created_at")
+                or meta.get("document_created_at")
+                or meta.get("timestamp")
+                or meta.get("session_date")
+            )
+            dct = self._parse_dct(dct_raw) if dct_raw else None
+            if dct is not None:
+                create_kwargs["document_created_at"] = dct
 
             requests.append(CreateMemoryRequest(**create_kwargs))
             session_map.append(session.session_id)
@@ -275,7 +283,6 @@ class SynapProvider(Provider):
         try:
             fetch_kwargs = dict(
                 user_id=options.container_tag,
-                customer_id=options.container_tag,
                 search_query=[query],
                 max_results=limit,
                 mode=mode,
@@ -285,7 +292,12 @@ class SynapProvider(Provider):
                 fetch_kwargs["types"] = retrieval_types
 
             context = await self._sdk.user.context.fetch(**fetch_kwargs)
-            return self._flatten_context(context)
+            results = self._flatten_context(context)
+
+            if options.threshold is not None:
+                results = [r for r in results if (r.get("score") or 0) >= options.threshold]
+
+            return results
         except Exception as e:
             logger.error("Synap search failed: %s", e)
             return []
@@ -302,13 +314,42 @@ class SynapProvider(Provider):
     def _format_session(session: UnifiedSession) -> str:
         """Format a UnifiedSession into a transcript string for ingestion."""
         lines = []
-        meta = session.metadata or {}
-        if meta.get("date"):
-            lines.append(f"[Date: {meta['date']}]")
         for msg in session.messages:
-            speaker = msg.speaker or msg.role.capitalize()
-            lines.append(f"{speaker}: {msg.content}")
+            raw_speaker = msg.speaker or ""
+            # Skip generic "speaker_a"/"speaker_b" placeholders — they are
+            # not informative and confuse entity extraction. Use real names
+            # when present, otherwise fall back to role.
+            if raw_speaker and not raw_speaker.startswith("speaker_"):
+                label = raw_speaker
+            else:
+                label = msg.role.capitalize()
+            lines.append(f"{label}: {msg.content}")
         return "\n".join(lines)
+
+    _DOW_PAREN_RE = re.compile(r"\([A-Za-z]{3,9}\)")
+
+    @classmethod
+    def _parse_dct(cls, value: Any) -> Optional[datetime]:
+        """Parse a Document Created Time from various formats:
+        - datetime: returned as-is
+        - ISO strings: 2023-05-08T13:56:00, 2023/05/25 (Thu) 20:21
+        - Human strings: '1:56 pm on 8 May, 2023'
+        """
+        if value is None or value == "":
+            return None
+        if isinstance(value, datetime):
+            return value
+        s = str(value).strip()
+        # LongMemEval uses '2023/05/25 (Thu) 20:21' — strip the day-of-week
+        s = cls._DOW_PAREN_RE.sub("", s).strip()
+        # Locomo uses '1:56 pm on 8 May, 2023' — dateutil handles 'on'
+        s = s.replace(" on ", " ")
+        try:
+            from dateutil import parser as date_parser
+            return date_parser.parse(s)
+        except (ValueError, TypeError) as e:
+            logger.warning("Synap DCT parse failed for %r: %s", value, e)
+            return None
 
     @staticmethod
     def _flatten_context(context) -> List[Dict[str, Any]]:

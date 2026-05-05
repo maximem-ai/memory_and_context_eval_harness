@@ -6,7 +6,7 @@ import shutil
 def test_runner_end_to_end():
     # Setup dummy config
     cfg = Config(
-        dataset="longmemeval",
+        dataset="locomo",
         adapter="adapters.adapter_examples.adapter_no_memory.NoMemoryAdapter",
         scorer="exact_f1",
         output_dir="tests/test_output",
