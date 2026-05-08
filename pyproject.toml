@@ -25,7 +25,7 @@ dependencies = [
     "mem0ai>=0.0.9",
     "zep-cloud>=3.16.0",
     "langchain-google-genai>=4.2.1",
-    "maximem-synap",
+    "maximem-synap>=0.2.3",
 ]
 
 [project.optional-dependencies]

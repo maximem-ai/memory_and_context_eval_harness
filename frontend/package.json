@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "sh -c 'PORT=3000; lsof -ti:$PORT >/dev/null 2>&1 && PORT=3001; echo \"Starting Next.js on port $PORT\"; next dev --port $PORT'",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

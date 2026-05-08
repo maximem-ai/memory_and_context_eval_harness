@@ -2,8 +2,6 @@
 instance_id: "${SYNAP_INSTANCE_ID}"
 api_key: "${SYNAP_API_KEY}"
 base_url: "${SYNAP_BASE_URL}"
-bootstrap_token: "${SYNAP_BOOTSTRAP_TOKEN}"
-client_id: "${SYNAP_CLIENT_ID}"
 mode: "FAST"
 top_k: 10
 default_user_id: "benchmark_user"
