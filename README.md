@@ -40,7 +40,7 @@ Dataset ──> Ingest ──> Search ──> Answer ──> Evaluate ──> Re
 
 ## Headline Results
 
-Run with `gpt-5` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, 5-seed mean), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper).
+Run with `gpt-5-mini` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, 5-seed mean), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper).
 
 | Benchmark | Provider | Cat 1-4 |
 |---|---|---|
