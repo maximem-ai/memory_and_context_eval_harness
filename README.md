@@ -45,7 +45,7 @@ Run with `gpt-5-mini` answer + `gpt-5-mini` judge, binary judging methodology (C
 | Benchmark | Provider | Cat 1-4 |
 |---|---|---|
 | LoCoMo | [Synap](https://maximem.ai) | **93.2%** |
-| LongMemEval (50q) | [Synap](https://maximem.ai) | **92.0%** (also reproduced on mem0's `memory-benchmarks` harness after `_flatten_context` fix lands) |
+| LongMemEval (50q) | [Synap](https://maximem.ai) | **92.0%** |
 
 See [docs/methodology.md](docs/methodology.md) (TBD) for run configuration, retrieval mode, and reproducibility notes.
 

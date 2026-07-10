@@ -94,16 +94,16 @@ class SynapProvider(Provider):
         await sdk.initialize()
         self._sdk = sdk
 
-        # Start gRPC listen stream
+        # Optional gRPC channel; REST is used if unavailable
         try:
             await sdk.instance.listen(
                 on_reconnect=lambda attempt: logger.info("Synap gRPC reconnected (attempt %d)", attempt),
                 on_disconnect=lambda reason: logger.warning("Synap gRPC disconnected: %s", reason),
-                on_context=lambda bundle: logger.debug("Synap anticipated context bundle received"),
+                on_context=lambda bundle: logger.debug("Synap stream message received"),
             )
-            logger.info("Synap gRPC listen stream established")
+            logger.info("Synap gRPC channel established")
         except Exception as e:
-            logger.warning("Synap gRPC listen failed (falling back to REST): %s", e)
+            logger.warning("Synap gRPC unavailable (falling back to REST): %s", e)
 
         logger.info("Synap provider initialised (real SDK — %s mode, TLS=%s)", self.mode, self.grpc_use_tls)
 
