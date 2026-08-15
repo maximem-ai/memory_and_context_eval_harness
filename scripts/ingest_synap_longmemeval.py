@@ -218,7 +218,7 @@ async def main(concurrency: int, reset: bool):
     total_elapsed = time.monotonic() - progress.start_time
 
     print("\n" + "─" * 90)
-    print(f"Ingestion complete:")
+    print("Ingestion complete:")
     print(f"  Sessions succeeded : {n_ok}")
     print(f"  Sessions failed    : {n_fail}")
     print(f"  Total elapsed      : {total_elapsed/60:.1f} min")

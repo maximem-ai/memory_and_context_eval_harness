@@ -6,42 +6,76 @@ on:
   pull_request:
     branches: [ main ]
 
+# Cancel superseded runs on the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  smoke-test:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Floor and current. requires-python is >=3.10.
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # The unit suite covers the provider contract and the scorers. Neither
+      # touches the network or a vendor SDK, so the heavy adapter
+      # dependencies are deliberately not installed here: this job stays fast
+      # and cannot fail because someone else's package broke.
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov ruff httpx
+
+      - name: Byte-compile every module
+        run: python -m compileall -q runner adapters datasets scorers tests
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Unit tests
+        run: pytest tests -v --cov=adapters --cov=scorers --cov-report=term-missing
+
+  # Guards against the failure that motivated this workflow: a class rename
+  # left adapters importing something that no longer existed, and the
+  # examples and docs drifted out of sync with the real interface.
+  packaging:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
-        
-    - name: Run Unit Tests
-      run: |
-        pytest tests
-        
-    - name: Run Smoke Demo (CLI)
-      run: |
-        evl run --config examples/longmemeval_demo.yaml
-        
-    - name: Verify Artifacts
-      run: |
-        # Check if results directory was created and contains expected files
-        run_dir=$(ls -d results/run-*)
-        if [ -z "$run_dir" ]; then
-          echo "No run directory found"
-          exit 1
-        fi
-        
-        ls -l $run_dir
-        
-        if [ ! -f "$run_dir/metadata.json" ]; then exit 1; fi
-        if [ ! -f "$run_dir/predictions.jsonl" ]; then exit 1; fi
-        if [ ! -f "$run_dir/trace.json" ]; then exit 1; fi
-        if [ ! -f "$run_dir/metrics.csv" ]; then exit 1; fi
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Build the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+
+      - name: Install the built wheel into a clean environment
+        run: |
+          python -m venv /tmp/wheelcheck
+          /tmp/wheelcheck/bin/pip install --quiet dist/*.whl
+
+      - name: Every declared package must import from the installed wheel
+        run: |
+          /tmp/wheelcheck/bin/python - <<'PY'
+          import importlib
+          for module in ("runner", "runner.types", "adapters", "datasets", "scorers"):
+              importlib.import_module(module)
+              print(f"ok  {module}")
+          PY

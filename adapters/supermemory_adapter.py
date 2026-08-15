@@ -11,7 +11,7 @@ import asyncio
 import logging
 import os
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from adapters.base_adapter import (
     ConcurrencyConfig,

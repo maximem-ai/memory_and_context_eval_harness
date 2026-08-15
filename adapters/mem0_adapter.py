@@ -16,7 +16,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 import httpx
 
@@ -24,7 +24,6 @@ from adapters.base_adapter import (
     ConcurrencyConfig,
     IngestOptions,
     IngestResult,
-    IngestionStatus,
     Provider,
     ProviderConfig,
     SearchOptions,

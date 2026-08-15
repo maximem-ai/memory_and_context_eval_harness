@@ -11,7 +11,7 @@ import logging
 import os
 from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 from runner.types import (
     GlobalIngestCheckpoint,

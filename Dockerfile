@@ -18,5 +18,9 @@ RUN pip install --no-cache-dir .[dev]
 # Define environment variable
 ENV PYTHONUNBUFFERED=1
 
-# Run the smoke test by default
-CMD ["pytest"]
+# The dashboard and API server.
+EXPOSE 8766
+
+# Serve by default. To run the test suite in this image instead:
+#   docker run --rm eval-harness:latest pytest tests
+CMD ["python", "-m", "runner.server"]

@@ -42,15 +42,12 @@ adapters = [
     "zep-cloud",
 ]
 
-[project.scripts]
-evl = "cli.main:main"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["runner", "adapters", "datasets", "scorers", "cli"]
+packages = ["runner", "adapters", "datasets", "scorers"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -59,6 +56,17 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+# One-off research scripts, not library code. Not import-checked in CI.
+extend-exclude = ["scripts", "frontend"]
+
+[tool.ruff.lint]
+# Correctness only, deliberately not style. Pyflakes (F) catches undefined
+# names, unused imports and dead locals, which is the class of bug that let a
+# base-class rename sit broken on main for months. E9 catches syntax and IO
+# errors. The stylistic rule sets (UP, I, BLE, ...) currently report ~550
+# findings across the codebase; turning them on belongs in its own formatting
+# PR so it does not bury real failures or churn a review.
+select = ["F", "E9"]
 
 [tool.mypy]
 strict = true

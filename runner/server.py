@@ -12,7 +12,7 @@ import os
 import shutil
 from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 try:
     from dotenv import load_dotenv
@@ -235,7 +235,7 @@ async def reset_and_rerun_phase(run_id: str, body: Dict[str, Any]):
     orchestrator.checkpoint_mgr._save_sync(checkpoint)
 
     # Determine which phases to run
-    from runner.types import PHASE_ORDER, get_phases_from_phase
+    from runner.types import get_phases_from_phase
     phases_to_run = get_phases_from_phase(from_phase)
 
     # Start the run with only those phases

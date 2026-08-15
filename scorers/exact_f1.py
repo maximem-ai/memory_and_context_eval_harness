@@ -3,10 +3,19 @@ import collections
 from typing import List, Dict
 
 def normalize_answer(s):
-    """Lower text and remove punctuation, articles and extra whitespace."""
-    def remove_articles(text):
-        regex = r'\b(a|an|the)\b'
-        return text # simplistic
+    """Lower text, remove punctuation, and collapse whitespace.
+
+    NOTE: unlike the SQuAD-style normalisation this metric is modelled on,
+    articles ("a", "an", "the") are NOT stripped. A dead `remove_articles`
+    helper used to sit here that was never called and returned its input
+    unchanged, so article stripping has never been applied. Behaviour is
+    left as-is on purpose: changing it would move F1 scores. Reinstating it
+    should be a deliberate, separately reviewed change.
+
+    This scorer is not currently on the evaluation path. `runner/phases/
+    evaluate.py` uses `scorers.llm_judge`, so no published benchmark number
+    depends on the behaviour described above.
+    """
     def white_space_fix(text):
         return ' '.join(text.split())
     def remove_punc(text):

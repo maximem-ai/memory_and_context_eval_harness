@@ -66,21 +66,25 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
-### 3. Run (Backend + Frontend)
+### 3. Get the datasets
 
 ```bash
-python -m runner.server --with-frontend
+python scripts/download_datasets.py --variant s
 ```
 
-This starts the API server at `http://localhost:8766`, launches the frontend, and opens the dashboard at `http://localhost:3000` automatically.
+`--variant s` is the 500-question LongMemEval set used for the published results. See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the other options.
 
-Or run them separately:
+### 4. Run
 
 ```bash
-# Backend only
 python -m runner.server
+```
 
-# Frontend only (in another terminal)
+This starts the API server and dashboard at `http://localhost:8766`.
+
+For frontend development with hot reloading, run it separately:
+
+```bash
 cd frontend && npm install && npm run dev
 ```
 
@@ -124,6 +128,14 @@ Register it in `adapters/__init__.py`:
 PROVIDER_REGISTRY["my-provider"] = "adapters.my_provider.MyProvider"
 ```
 
+Then check your class against the contract before running anything:
+
+```bash
+pytest tests/unit/test_provider_contract.py -v
+```
+
+**→ [Build Your Own Adapter](docs/BUILD_YOUR_OWN_ADAPTER.md)** walks through the whole thing with a complete worked example, including the mistakes that quietly cost you accuracy. **[Provider Specification](docs/ADAPTER_SPEC.md)** is the interface reference.
+
 ## Adding a Benchmark
 
 Implement the `Benchmark` abstract class from `runner/types.py`:
@@ -166,9 +178,12 @@ frontend/            # Next.js dashboard
 
 ## Documentation
 
+- [Quickstart](docs/QUICKSTART.md) — Install, configure, download datasets, run
+- [Build Your Own Adapter](docs/BUILD_YOUR_OWN_ADAPTER.md) — Benchmark your own memory system, with a worked example
+- [Provider Specification](docs/ADAPTER_SPEC.md) — Interface reference: methods, types, lifecycle
 - [Framework Architecture](framework.md) — Pipeline phases, checkpointing, evaluation modes, judge prompts, retrieval metrics
+- [Deviations](docs/DEVIATIONS.md) — Where our setup differs from published methodology
 - [Contributing Guide](CONTRIBUTING.md) — How to add providers, benchmarks, and submit PRs
-- [Adapter Specification](docs/ADAPTER_SPEC.md) — Provider interface details
 
 ## License
 
