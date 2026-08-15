@@ -5,7 +5,7 @@ Thank you for your interest in contributing. This guide covers everything you ne
 ## Development Setup
 
 ```bash
-git clone https://github.com/gauravmaximem/memory_and_context_eval_harness.git
+git clone https://github.com/maximem-ai/memory_and_context_eval_harness.git
 cd memory_and_context_eval_harness
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"

@@ -34,27 +34,27 @@ Dataset ──> Ingest ──> Search ──> Answer ──> Evaluate ──> Re
 
 | Benchmark | Questions | Sessions | Focus |
 |-----------|-----------|----------|-------|
-| [LongMemEval](https://arxiv.org/abs/2407.01501) | 500 | 940 | Long-term memory across sessions |
+| [LongMemEval](https://arxiv.org/abs/2410.10813) | 500 | 940 | Long-term memory across sessions |
 | [LoCoMo](https://snap-research.github.io/locomo/) | 1,540 | 5,290 | Multi-conversation, multi-modal, very long context |
 | **Custom** | Implement `Benchmark` ABC | See [Adding Benchmarks](#adding-a-benchmark) |
 
 ## Headline Results
 
-Run with `gpt-5-mini` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, 5-seed mean), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper).
+Run with `gpt-5-mini` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, 5-seed mean), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper). Both benchmarks are scored at full scale on the official public distributions, with no custom subsets and no relabeling.
 
-| Benchmark | Provider | Cat 1-4 |
-|---|---|---|
-| LoCoMo | [Synap](https://maximem.ai) | **93.2%** |
-| LongMemEval (50q) | [Synap](https://maximem.ai) | **92.0%** |
+| Benchmark | Scope | Provider | Accuracy |
+|---|---|---|---|
+| LoCoMo | Full set, 1,540 Cat 1-4 questions (adversarial Cat 5 excluded) | [Synap](https://maximem.ai) | **93.2%** |
+| LongMemEval | Full set, 500 questions across 6 categories | [Synap](https://maximem.ai) | **92.0%** |
 
-See [docs/methodology.md](docs/methodology.md) (TBD) for run configuration, retrieval mode, and reproducibility notes.
+Full methodology, category-level breakdowns, and the cross-vendor comparison live in the results repo: [`maximem-ai/eval_benchmark_runs_output`](https://github.com/maximem-ai/eval_benchmark_runs_output).
 
 ## Quickstart
 
 ### 1. Install
 
 ```bash
-git clone https://github.com/gauravmaximem/memory_and_context_eval_harness.git
+git clone https://github.com/maximem-ai/memory_and_context_eval_harness.git
 cd memory_and_context_eval_harness
 pip install -e .
 ```
