@@ -7,8 +7,7 @@ breakdowns.
 
 import logging
 import math
-from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 from runner.types import (
     Benchmark,

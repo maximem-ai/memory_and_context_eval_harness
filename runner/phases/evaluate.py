@@ -7,7 +7,7 @@ Runs judge_single() and judge_retrieval_quality() in parallel for ALL benchmarks
 import asyncio
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from runner.types import (
     Benchmark,

@@ -10,7 +10,7 @@ mapped to Zep's user_id for data isolation.
 import logging
 import os
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 from adapters.base_adapter import (
     ConcurrencyConfig,

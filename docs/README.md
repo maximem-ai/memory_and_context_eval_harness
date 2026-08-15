@@ -1,48 +1,48 @@
-# Eval Framework
+# Documentation
 
-A production-grade, reproducible benchmarking framework for memory/context systems.
+An open evaluation harness for memory and context management systems. It runs
+standardised benchmarks against pluggable providers and reports accuracy,
+latency and retrieval quality.
 
-## Features
+## Start here
 
-- **Standardized Harness**: Powered by standardized evaluation methodology.
-- **Reference Adapters**: No Memory, Full Transcript, and "YourMemory" sample.
-- **Datasets**: Native support for [LongMemEval](https://github.com/xiaowu0162/LongMemEval) and [LoCoMo](https://github.com/snap-research/locomo).
-- **Reproducibility**: Dockerized runs, Git-SHA tracking, and full artifact generation (`trace.json`, `metrics.csv`).
-- **Flexible Scoring**: Exact/F1, Temporal Accuracy, and LLM-as-Judge.
+| Guide | Read it when |
+|---|---|
+| [Quickstart](QUICKSTART.md) | You want to install the harness and run an existing provider. |
+| [Build Your Own Adapter](BUILD_YOUR_OWN_ADAPTER.md) | You want to benchmark your own memory system. |
+| [Provider Specification](ADAPTER_SPEC.md) | You need the exact interface: methods, types, lifecycle. |
+| [Deviations](DEVIATIONS.md) | You are comparing our numbers against a published paper. |
+| [Notes on Licenses](NOTES_ON_LICENSES.md) | You need dataset terms of use. |
 
-## Quickstart
+For pipeline internals (phases, checkpointing, evaluation modes, judge prompts,
+retrieval metrics) see [framework.md](../framework.md) at the repository root.
 
-### 1. Installation
+## What the harness does
 
-```bash
-git clone https://github.com/maximem-ai/memory_and_context_eval_harness.git
-cd memory_and_context_eval_harness
-pip install -e .
+```
+Dataset ──> Ingest ──> Search ──> Answer ──> Evaluate ──> Report
+              |           |          |           |           |
+         Sessions     Per-query   LLM call   LLM judge   Accuracy,
+         stored in    retrieval   generates  scores vs    latency,
+         provider     from        hypothesis ground       retrieval
+         memory       provider               truth        metrics
 ```
 
-### 2. Run a Smoke Test
+A provider adapter is responsible for the first two phases only: storing
+conversations, and retrieving relevant context for a question. The harness owns
+answering, judging and reporting, so every system is scored the same way.
 
-```bash
-# Run with NoMemory adapter on LoCoMo
-evl run --config examples/longmemeval_demo.yaml
-```
+## Supported providers
 
-### 3. Docker
+Synap, Mem0, Zep and Supermemory ship in `adapters/`. Adding your own is
+documented in [Build Your Own Adapter](BUILD_YOUR_OWN_ADAPTER.md).
 
-```bash
-docker build -t eval-fw:latest .
-docker run --rm eval-fw:latest evl run --config examples/longmemeval_demo.yaml
-```
+## Published results
 
-See [QUICKSTART.md](QUICKSTART.md) for more details.
-
-## Documentation
-
-- [Quickstart Guide](QUICKSTART.md)
-- [Adapter Specification](ADAPTER_SPEC.md)
-- [Deviations from Published Methodology](DEVIATIONS.md)
-- [Notes on Licenses](NOTES_ON_LICENSES.md)
+Benchmark results, full methodology and the cross-vendor configuration
+comparison live in
+[`maximem-ai/eval_benchmark_runs_output`](https://github.com/maximem-ai/eval_benchmark_runs_output).
 
 ## License
 
-MIT
+MIT. Datasets carry their own terms, see [NOTES_ON_LICENSES.md](NOTES_ON_LICENSES.md).

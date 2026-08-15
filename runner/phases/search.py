@@ -7,7 +7,7 @@ without re-searching.
 
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from runner.types import (
     Benchmark,

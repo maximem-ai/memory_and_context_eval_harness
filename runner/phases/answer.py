@@ -5,11 +5,10 @@ Reads search results from disk, builds a prompt with context, and calls
 the configured answering model.
 """
 
-import json
 import logging
 import os
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from runner.types import (
     Benchmark,
