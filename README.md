@@ -40,7 +40,7 @@ Dataset ──> Ingest ──> Search ──> Answer ──> Evaluate ──> Re
 
 ## Headline Results
 
-Run with `gpt-5-mini` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, 5-seed mean), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper). Both benchmarks are scored at full scale on the official public distributions, with no custom subsets and no relabeling.
+Run with `gpt-5-mini` answer + `gpt-5-mini` judge, binary judging methodology (CORRECT / WRONG, single run per benchmark), excluding adversarial questions per industry convention (mem0, Zep, original LoCoMo paper). Both benchmarks are scored at full scale on the official public distributions, with no custom subsets and no relabeling.
 
 | Benchmark | Scope | Provider | Accuracy |
 |---|---|---|---|
@@ -182,7 +182,7 @@ frontend/            # Next.js dashboard
 - [Build Your Own Adapter](docs/BUILD_YOUR_OWN_ADAPTER.md) — Benchmark your own memory system, with a worked example
 - [Provider Specification](docs/ADAPTER_SPEC.md) — Interface reference: methods, types, lifecycle
 - [Framework Architecture](framework.md) — Pipeline phases, checkpointing, evaluation modes, judge prompts, retrieval metrics
-- [Deviations](docs/DEVIATIONS.md) — Where our setup differs from published methodology
+- [Deviations](docs/DEVIATIONS.md) — Where this setup differs from the published LongMemEval and LoCoMo protocols
 - [Contributing Guide](CONTRIBUTING.md) — How to add providers, benchmarks, and submit PRs
 
 ## License
