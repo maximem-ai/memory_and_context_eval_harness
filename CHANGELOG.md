@@ -33,6 +33,6 @@
 
 ### Design Trade-offs
 - **PII Redaction**: Currently rudimentary; rely on dataset-level sanitization for now. Strict PII redaction (flags) is planned for v0.2.
-- **External Integration**: Implemented as a standalone compatible shim. Full integration with the upstream external benchmark platform would require it to be published to PyPI.
+- **External Integration**: The runner is standalone. It exposes a stable adapter interface that another platform can drive, but ships no integration shim of its own.
 - **LLM Judge**: The implementation is a scaffold that requires an `OPENAI_API_KEY` to function fully. A dummy fallback is provided for smoke tests.
 - **Dataset Hosting**: Loaders default to embedded small samples for immediate portability and smoke testing. Authenticated fetching is mocked.

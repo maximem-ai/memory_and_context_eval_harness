@@ -9,10 +9,31 @@ Downloads via: python scripts/download_datasets.py --dataset locomo
 
 import json
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(_DIR, "locomo10.json")
+
+_SMOKE = os.environ.get("EVAL_HARNESS_SMOKE") == "1"
+
+
+def _require_data_file(path: Optional[str] = None) -> Optional[str]:
+    """Resolve the dataset path, or fail loudly.
+
+    Returns None only in smoke-test mode, where callers substitute SAMPLE_DATA.
+    """
+    candidate = path or DATA_FILE
+    if os.path.exists(candidate):
+        return candidate
+    if _SMOKE:
+        return None
+    raise FileNotFoundError(
+        f"No LoCoMo data file found at {candidate}. "
+        "Run: python scripts/download_datasets.py --dataset locomo\n"
+        "To run the smoke test against embedded sample data instead, "
+        "set EVAL_HARNESS_SMOKE=1. Scored runs must not use that path."
+    )
+
 
 CATEGORY_MAP = {
     1: "single-hop",
@@ -145,8 +166,8 @@ def load_dataset(path: str = None) -> List[Dict[str, Any]]:
     Returns list of samples in runner format. Falls back to SAMPLE_DATA
     if the real data file hasn't been downloaded yet.
     """
-    data_path = path or DATA_FILE
-    if not os.path.exists(data_path):
+    data_path = _require_data_file(path)
+    if not data_path:
         return SAMPLE_DATA
 
     with open(data_path, "r") as f:

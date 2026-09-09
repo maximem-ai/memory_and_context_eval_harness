@@ -45,6 +45,28 @@ def _find_data_file() -> Optional[str]:
     return None
 
 
+_SMOKE = os.environ.get("EVAL_HARNESS_SMOKE") == "1"
+
+
+def _require_data_file() -> Optional[str]:
+    """Resolve the dataset path, or fail loudly.
+
+    Returns None only in smoke-test mode, where callers substitute SAMPLE_DATA.
+    """
+    path = _find_data_file()
+    if path:
+        return path
+    if _SMOKE:
+        return None
+    raise FileNotFoundError(
+        "No LongMemEval data file found in "
+        f"{_DIR}. Expected one of: {', '.join(_VARIANTS)}. "
+        "Run: python scripts/download_datasets.py --dataset longmemeval\n"
+        "To run the smoke test against embedded sample data instead, "
+        "set EVAL_HARNESS_SMOKE=1. Scored runs must not use that path."
+    )
+
+
 def _convert_record(record: dict) -> dict:
     """Convert a single LongMemEval record to runner format.
 
@@ -102,7 +124,7 @@ def load_dataset(path: str = None) -> List[Dict[str, Any]]:
     if path and os.path.exists(path):
         data_path = path
     else:
-        data_path = _find_data_file()
+        data_path = _require_data_file()
         if not data_path:
             return SAMPLE_DATA
 
@@ -122,7 +144,7 @@ def load_all_turns(max_records: int = 0) -> List[Dict[str, Any]]:
     Args:
         max_records: Limit to first N records (0 = all).
     """
-    data_path = _find_data_file()
+    data_path = _require_data_file()
     if not data_path:
         return [t for s in SAMPLE_DATA for t in s.get("turns", [])]
 
@@ -169,9 +191,21 @@ def load_question_session_map(max_records: int = 0) -> tuple:
         - question_to_sessions: {question_id: [session_id, ...]}
         - session_data: {session_id: {name: str, turns: [...]}}
     """
-    data_path = _find_data_file()
+    data_path = _require_data_file()
     if not data_path:
-        return {}, {}
+        # Smoke mode: build the same two structures from SAMPLE_DATA so that
+        # the question count and the session count stay consistent.
+        question_to_sessions: Dict[str, List[str]] = {}
+        session_data: Dict[str, Dict[str, Any]] = {}
+        for sample in SAMPLE_DATA:
+            sid = sample["session_id"]
+            session_data[sid] = {
+                "name": f"Session {sid}",
+                "turns": sample.get("turns", []),
+            }
+            for q in sample.get("questions", []):
+                question_to_sessions[q["question_id"]] = [sid]
+        return question_to_sessions, session_data
 
     with open(data_path, "r") as f:
         raw = json.load(f)
@@ -216,7 +250,7 @@ def load_question_session_map(max_records: int = 0) -> tuple:
 
 def load_questions(max_records: int = 0) -> List[Dict[str, Any]]:
     """Load all evaluation questions as a flat list."""
-    data_path = _find_data_file()
+    data_path = _require_data_file()
     if not data_path:
         return [q for s in SAMPLE_DATA for q in s.get("questions", [])]
 
