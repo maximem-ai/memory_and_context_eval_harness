@@ -26,6 +26,8 @@ dependencies = [
     "zep-cloud>=3.16.0",
     "langchain-google-genai>=4.2.1",
     "maximem-synap>=0.2.3",
+    "litellm",
+    "python-dateutil",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +49,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["runner", "adapters", "datasets", "scorers"]
+packages = ["runner", "adapters", "datasets", "scorers", "benchmarks"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -29,23 +29,23 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      # The unit suite covers the provider contract and the scorers. Neither
+      # The unit suite covers the provider contract, the scorers and the LongMemEval-S runner. Neither
       # touches the network or a vendor SDK, so the heavy adapter
       # dependencies are deliberately not installed here: this job stays fast
       # and cannot fail because someone else's package broke.
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov ruff httpx
+          pip install pytest pytest-cov ruff httpx pyyaml
 
       - name: Byte-compile every module
-        run: python -m compileall -q runner adapters datasets scorers tests
+        run: python -m compileall -q runner adapters datasets scorers benchmarks tests
 
       - name: Lint
         run: ruff check .
 
       - name: Unit tests
-        run: pytest tests -v --cov=adapters --cov=scorers --cov-report=term-missing
+        run: pytest tests -v --cov=adapters --cov=scorers --cov=benchmarks --cov-report=term-missing
 
   # Guards against the failure that motivated this workflow: a class rename
   # left adapters importing something that no longer existed, and the

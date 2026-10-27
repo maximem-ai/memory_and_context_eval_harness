@@ -18,6 +18,9 @@ results/
 checkpoints/
 logs/
 
+# Downloaded benchmark data (large; fetch with scripts/download_datasets.py)
+datasets/longmemeval/*.json
+
 # Frontend
 .next/
 frontend/.next/
@@ -50,3 +53,7 @@ htmlcov/
 # Lock files (optional — uncomment if you want to track them)
 # uv.lock
 # frontend/package-lock.json
+
+# Never commit
+Oss repo launch kit*.zip
+*.tsbuildinfo

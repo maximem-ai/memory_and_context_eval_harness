@@ -1,0 +1,58 @@
+# Synap adapter configuration for LongMemEval-S.
+#
+# Used by `python -m benchmarks.longmemeval.run`. Nothing here tunes the memory
+# system: instance-side behaviour (extraction, deduplication, ranking, graph
+# schemas) is whatever your Synap instance is configured to do, and this repo
+# does not set it. Two runs against differently configured instances are not
+# comparable.
+#
+# The ${...} placeholders are read from the environment (or .env).
+# SYNAP_BASE_URL falls back to https://synap-cloud-prod.maximem.ai when unset.
+
+instance_id: "${SYNAP_INSTANCE_ID}"
+api_key: "${SYNAP_API_KEY}"
+base_url: "${SYNAP_BASE_URL}"
+
+# Accurate mode is the default for this benchmark: fast mode skips graph
+# traversal entirely, so a fast run measures a different retrieval path.
+mode: "accurate"
+retrieval_mode: "accurate"
+
+top_k: 50
+retrieval_max_results: 50
+
+# LongMemEval ships 500 independent question haystacks. Each question gets its
+# own Synap user, so a retrieval can only ever see its own haystack.
+
+# LongMemEval supplies only a session-level date, and the runner gives every
+# turn in a session that same date, so an inline per-turn stamp would be an
+# identical prefix on every line: token spend with no ordering information.
+inline_turn_timestamps: false
+
+# The anticipation stream is a background prefetch. It competes with the
+# retrieval path under measurement and is meaningless for a batch benchmark.
+enable_grpc_listen: false
+
+# A transient 5xx scored as "no memory retrieved" would silently depress the
+# score, so retrieval retries with backoff and every occurrence is recorded in
+# the run manifest.
+search_retries: 4
+search_backoff_seconds: 3.0
+
+# Indexing poll bounds. The status endpoint answers 404 for jobs it will not
+# resolve and can 5xx transiently; the adapter treats the first as terminal and
+# the second as retryable, and gives up on wall-clock time rather than a poll
+# count.
+#
+# The timeout has to cover one user's whole serial queue: sessions within a
+# single user index one after another, so the ceiling must exceed
+# (sessions in the largest scope) x (per-session latency). The S split has
+# scopes of roughly 40 to 60 sessions, each taking on the order of two minutes,
+# so 10800s (3 hours) leaves headroom. A scope whose queue wedges holds its
+# ingest slot until this ceiling, which is why S runs use a high
+# --ingest-concurrency (default 12).
+indexing_poll_interval: 3.0
+indexing_max_interval: 15.0
+indexing_timeout_s: 10800
+indexing_status_concurrency: 10
+indexing_max_consecutive_errors: 8

@@ -1,0 +1,12 @@
+repo:   https://github.com/xiaowu0162/LongMemEval
+commit: 9e0b455f4ef0e2ab8f2e582289761153549043fc
+license: MIT (see LICENSE in this directory)
+vendored: src/evaluation/evaluate_qa.py  (the official QA judge)
+          src/evaluation/print_qa_metrics.py
+
+Only the evaluation half is vendored, unmodified. The retrieval and indexing
+half of the upstream repo builds its own RAG stack over the haystack, which is
+the component the memory system under test replaces, so it is not included.
+
+tests/unit/test_longmemeval_s.py checks that benchmarks/longmemeval/judge.py
+builds byte-identical judge prompts to evaluate_qa.get_anscheck_prompt.
