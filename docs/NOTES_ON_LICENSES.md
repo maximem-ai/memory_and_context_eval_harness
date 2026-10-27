@@ -6,5 +6,8 @@ Released by Snap Research alongside [Maharana et al., ACL 2024](https://arxiv.or
 ## LongMemEval Dataset
 Released alongside [Wu et al., ICLR 2025](https://arxiv.org/abs/2410.10813). Refer to the [LongMemEval repository](https://github.com/xiaowu0162/LongMemEval) for the dataset and its terms of use.
 
+## LongMemEval judge code
+The two evaluation scripts under `benchmarks/longmemeval/upstream/` are vendored unmodified from [xiaowu0162/LongMemEval](https://github.com/xiaowu0162/LongMemEval) at the commit in `PINNED_COMMIT`. They are MIT licensed; the license text is kept next to them in `LICENSE`.
+
 ## Usage
 This framework is MIT licensed. However, when using it with specific datasets or memory providers (e.g. proprietary ones), users must respect the licenses of those components.

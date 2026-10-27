@@ -80,24 +80,23 @@ export default function RunDetailPage() {
           <h1 className="text-xl font-display font-semibold">{runId}</h1>
           <CopyButton text={runId} />
           <span className={cn("badge", getStatusColor(run.status))}>{run.status}</span>
-          <span className="badge badge-neutral text-[10px]">{run.isolationMode || "global"}</span>
         </div>
         <div className="flex items-center gap-2">
           {isRunning && (
             <button onClick={() => stopRun(runId).catch(() => {}).finally(refresh)} className="btn btn-danger text-xs">Stop</button>
           )}
           {!isRunning && summary.searched > 0 && summary.answered < summary.total && (
-            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, isolation_mode: run.isolationMode, phases: ["answer", "evaluate", "report"] }).catch(() => {}).finally(refresh)} className="btn btn-primary text-xs">
+            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, phases: ["answer", "evaluate", "report"] }).catch(() => {}).finally(refresh)} className="btn btn-primary text-xs">
               Continue: Answer + Evaluate
             </button>
           )}
           {!isRunning && summary.answered > 0 && summary.evaluated < summary.total && (
-            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, isolation_mode: run.isolationMode, phases: ["evaluate", "report"] }).catch(() => {}).finally(refresh)} className="btn btn-primary text-xs">
+            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, phases: ["evaluate", "report"] }).catch(() => {}).finally(refresh)} className="btn btn-primary text-xs">
               Continue: Evaluate
             </button>
           )}
           {!isRunning && summary.evaluated > 0 && summary.evaluated === summary.total && run.status !== "completed" && (
-            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, isolation_mode: run.isolationMode, phases: ["report"] }).catch(() => {}).finally(refresh)} className="btn btn-primary text-xs">
+            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, phases: ["report"] }).catch(() => {}).finally(refresh)} className="btn btn-primary text-xs">
               Generate Report
             </button>
           )}
@@ -112,7 +111,7 @@ export default function RunDetailPage() {
             </button>
           )}
           {!isRunning && (
-            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, isolation_mode: run.isolationMode, phases: ["search", "answer", "evaluate", "report"], force: true }).catch(() => {}).finally(refresh)} className="btn btn-ghost text-xs">
+            <button onClick={() => startRun({ run_id: runId, provider: run.provider, benchmark: run.benchmark, judge_model: run.judge, answering_model: run.answeringModel, phases: ["search", "answer", "evaluate", "report"], force: true }).catch(() => {}).finally(refresh)} className="btn btn-ghost text-xs">
               Re-run All
             </button>
           )}

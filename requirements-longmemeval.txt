@@ -1,0 +1,16 @@
+# Minimal dependencies for the LongMemEval-S runner:
+#   python -m benchmarks.longmemeval.run
+# The full platform (dashboard, other providers) is in pyproject.toml.
+maximem-synap==0.5.8
+openai
+litellm
+tiktoken
+httpx
+pyyaml
+python-dotenv
+pydantic
+requests
+tqdm
+numpy
+pandas
+python-dateutil

@@ -44,7 +44,6 @@ export default function LeaderboardPage() {
     { key: "provider", header: "Provider", render: (e: any) => <span className="capitalize font-medium">{e.provider}</span> },
     { key: "benchmark", header: "Benchmark", render: (e: any) => <span className="capitalize">{e.benchmark}</span> },
     { key: "version", header: "Version", render: (e: any) => <span className="text-accent font-mono text-xs">{e.version}</span> },
-    { key: "mode", header: "Mode", render: (e: any) => <span className="badge badge-neutral text-[10px]">{e.isolationMode || "global"}</span> },
     { key: "accuracy", header: "Accuracy", align: "right" as const, render: (e: any) => (
       <span className="font-mono font-semibold text-accent">{formatAccuracy(e.accuracy)}</span>
     )},

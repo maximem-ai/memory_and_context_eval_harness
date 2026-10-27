@@ -35,7 +35,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 COMPARISONS_DIR = os.path.join(DATA_DIR, "comparisons")
 LEADERBOARD_PATH = os.path.join(DATA_DIR, "leaderboard.json")
 
-app = FastAPI(title="Context Bench API")
+app = FastAPI(title="Eval Harness API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -104,7 +104,6 @@ def _serialize_question(qcp, checkpoint_mgr, run_id: str) -> Dict[str, Any]:
 async def start_ingest(body: Dict[str, Any]):
     provider = body.get("provider", "synap")
     benchmark = body.get("benchmark", "longmemeval")
-    isolation_mode = body.get("isolation_mode", "global")
     container_tag_prefix = body.get("container_tag_prefix")
     max_groups = body.get("max_groups")
 
@@ -114,9 +113,8 @@ async def start_ingest(body: Dict[str, Any]):
 
     async def _run():
         try:
-            await orchestrator.global_ingest(
+            await orchestrator.ingest(
                 provider, benchmark,
-                isolation_mode=isolation_mode,
                 container_tag_prefix=container_tag_prefix,
                 max_groups=max_groups,
             )
@@ -125,7 +123,7 @@ async def start_ingest(body: Dict[str, Any]):
             await ws_broadcast({"type": "ingest_error", "provider": provider, "benchmark": benchmark, "error": str(e)})
 
     _running_tasks[task_key] = asyncio.create_task(_run())
-    return {"started": True, "provider": provider, "benchmark": benchmark, "isolationMode": isolation_mode}
+    return {"started": True, "provider": provider, "benchmark": benchmark}
 
 
 @app.post("/api/ingest/stop")
@@ -144,14 +142,13 @@ async def stop_ingest(body: Dict[str, Any]):
 async def start_run(body: Dict[str, Any]):
     provider = body.get("provider", "synap")
     benchmark = body.get("benchmark", "longmemeval")
-    judge = body.get("judge_model", "gpt-4o")
-    model = body.get("answering_model", "gpt-4o")
+    judge = body.get("judge_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-4o")
+    model = body.get("answering_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-5.4")
     run_id = body.get("run_id")
     force = body.get("force", False)
     phases = body.get("phases")
     limit = body.get("limit")
     system_prompt = body.get("system_prompt", "")
-    isolation_mode = body.get("isolation_mode", "global")
     retrieval_mode = body.get("retrieval_mode")
     container_tag_prefix = body.get("container_tag_prefix")
     pipelined = bool(body.get("pipelined", False))
@@ -205,7 +202,7 @@ async def start_run(body: Dict[str, Any]):
             await orchestrator.run(
                 provider_name=provider, benchmark_name=benchmark,
                 judge_model=judge, answering_model=model, run_id=run_id,
-                isolation_mode=isolation_mode, sampling=sampling,
+                sampling=sampling,
                 concurrency=concurrency, phases=phases,
                 system_prompt=system_prompt,
                 provider_config=provider_config or None,
@@ -218,7 +215,7 @@ async def start_run(body: Dict[str, Any]):
             await ws_broadcast({"type": "run_error", "provider": provider, "benchmark": benchmark, "error": str(e)})
 
     _running_tasks[task_key] = asyncio.create_task(_run())
-    return {"started": True, "provider": provider, "benchmark": benchmark, "isolationMode": isolation_mode}
+    return {"started": True, "provider": provider, "benchmark": benchmark}
 
 
 @app.post("/api/runs/{run_id}/reset-phase")
@@ -251,7 +248,7 @@ async def reset_and_rerun_phase(run_id: str, body: Dict[str, Any]):
             await orchestrator.run(
                 provider_name=provider, benchmark_name=benchmark,
                 judge_model=checkpoint.judge, answering_model=checkpoint.answering_model,
-                run_id=run_id, isolation_mode=checkpoint.isolation_mode,
+                run_id=run_id,
                 phases=phases_to_run,
             )
         except Exception as e:
@@ -289,7 +286,6 @@ async def get_run_detail(run_id: str):
         "benchmark": checkpoint.benchmark,
         "judge": checkpoint.judge,
         "answeringModel": checkpoint.answering_model,
-        "isolationMode": checkpoint.isolation_mode,
         "status": checkpoint.status,
         "createdAt": checkpoint.created_at,
         "updatedAt": checkpoint.updated_at,
@@ -397,9 +393,8 @@ def _save_comparison(data: Dict) -> None:
 async def start_compare(body: Dict[str, Any]):
     providers = body.get("providers", [])
     benchmark = body.get("benchmark", "longmemeval")
-    judge = body.get("judge_model", "gpt-4o")
-    model = body.get("answering_model", "gpt-4o")
-    isolation_mode = body.get("isolation_mode", "global")
+    judge = body.get("judge_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-4o")
+    model = body.get("answering_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-5.4")
     force = body.get("force", False)
     limit = body.get("limit")
     compare_id = body.get("compare_id") or f"compare-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
@@ -417,7 +412,6 @@ async def start_compare(body: Dict[str, Any]):
         "benchmark": benchmark,
         "judge": judge,
         "answeringModel": model,
-        "isolationMode": isolation_mode,
         "status": "running",
         "runs": {},
         "createdAt": _now_iso(),
@@ -430,7 +424,7 @@ async def start_compare(body: Dict[str, Any]):
             results = await orchestrator.compare(
                 provider_names=providers, benchmark_name=benchmark,
                 judge_model=judge, answering_model=model,
-                isolation_mode=isolation_mode, sampling=sampling, force=force,
+                sampling=sampling, force=force,
             )
             # Update comparison with run IDs and status
             comp = _load_comparison(compare_id) or comp_data
@@ -573,7 +567,6 @@ async def add_to_leaderboard(body: Dict[str, Any]):
         "byQuestionType": report.get("by_question_type", {}),
         "latency": report.get("latency", {}),
         "retrieval": report.get("retrieval"),
-        "isolationMode": getattr(checkpoint, "isolation_mode", "global"),
         "judgeModel": report.get("judge", checkpoint.judge),
         "answeringModel": report.get("answering_model", checkpoint.answering_model),
         "addedAt": _now_iso(),
@@ -650,8 +643,9 @@ if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8766):
-    """Start the server."""
+def run_server(host: str = "0.0.0.0", port: int = 0):
+    """Start the server. The port defaults to $EVAL_HARNESS_PORT, else 8766."""
+    port = port or int(os.environ.get("EVAL_HARNESS_PORT", "8766"))
     try:
         from dotenv import load_dotenv
         load_dotenv()
@@ -664,7 +658,7 @@ def run_server(host: str = "0.0.0.0", port: int = 8766):
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
-    logger.info("Starting Context Bench server on %s:%d", host, port)
+    logger.info("Starting eval harness server on %s:%d", host, port)
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 

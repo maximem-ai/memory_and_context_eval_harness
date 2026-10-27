@@ -53,7 +53,7 @@ async def evaluate_one(
         judge_task = asyncio.create_task(
             _run_judge(
                 qcp.question, qcp.ground_truth, hypothesis,
-                qcp.question_type, judge_model,
+                qcp.question_type, judge_model, question_id,
             )
         )
         retrieval_task = asyncio.create_task(
@@ -153,6 +153,7 @@ async def _run_judge(
     hypothesis: str,
     question_type: str,
     model: str,
+    question_id: str = "",
 ) -> Dict[str, Any]:
     """Run the answer judge (reuses existing scorers.llm_judge)."""
     try:
@@ -163,6 +164,7 @@ async def _run_judge(
             gold=ground_truth,
             model=model,
             question_type=question_type,
+            question_id=question_id,
         )
         return result
     except Exception as e:

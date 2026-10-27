@@ -76,7 +76,6 @@ export default function CompareDetailPage() {
       <div className="flex items-center gap-6 text-sm text-fg-muted mb-6">
         <span>Providers: {providers.map((p: string) => <span key={p} className="badge badge-neutral text-[10px] ml-1">{p}</span>)}</span>
         <span>Benchmark: <strong className="text-fg capitalize">{comp.benchmark}</strong></span>
-        <span>Mode: <strong className="text-fg">{comp.isolationMode || "global"}</strong></span>
       </div>
 
       {/* Per-provider run links */}

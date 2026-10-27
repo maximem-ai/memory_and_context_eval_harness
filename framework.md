@@ -32,7 +32,7 @@
 │                               ▼                                        │
 │  ┌─────────────────────────────────────────────────────────────────┐  │
 │  │                       ORCHESTRATOR                               │  │
-│  │  global_ingest()  run()  compare()  run_phase()                 │  │
+│  │  ingest()  run()     compare()  run_phase()                 │  │
 │  └─────────────────────────────────────────────────────────────────┘  │
 │                               │                                        │
 └───────────────────────────────┼────────────────────────────────────────┘
@@ -59,39 +59,17 @@
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Evaluation Modes
+## Containers
+
+Each question gets its own container holding only that question's haystack
+sessions, so there is no cross-contamination between questions.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    GLOBAL MODE                               │
-│                                                              │
-│  All sessions → Single container → All questions search it  │
-│                                                              │
-│  Container: "longmemeval-synap"                              │
-│  ┌──────────────────────────────────────────┐               │
-│  │  Session 1  Session 2  ...  Session 940  │               │
-│  └──────────────────────────────────────────┘               │
-│       ↑ Q1 searches    ↑ Q2 searches    ↑ Q500 searches    │
-│                                                              │
-│  Pro: Fast (one ingestion), cross-session reasoning          │
-│  Con: Noise from irrelevant sessions can confuse answers     │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                   ISOLATED MODE                              │
-│                                                              │
-│  Each question gets its own container with only relevant     │
-│  sessions. No cross-contamination.                           │
-│                                                              │
-│  Container: "longmemeval-synap_{question_id}"                │
-│  ┌────────────┐  ┌────────────┐       ┌────────────┐       │
-│  │ Q1: Sess   │  │ Q2: Sess   │  ...  │ Q500: Sess │       │
-│  │ 3, 7, 12   │  │ 1, 5       │       │ 8, 44, 201 │       │
-│  └────────────┘  └────────────┘       └────────────┘       │
-│                                                              │
-│  Pro: Clean evaluation, each question sees only its evidence │
-│  Con: Slower (N separate ingestions), no cross-session       │
-└─────────────────────────────────────────────────────────────┘
+Container: "longmemeval-synap_{question_id}"
+┌────────────┐  ┌────────────┐       ┌────────────┐
+│ Q1: Sess   │  │ Q2: Sess   │  ...  │ Q500: Sess │
+│ 3, 7, 12   │  │ 1, 5       │       │ 8, 44, 201 │
+└────────────┘  └────────────┘       └────────────┘
 ```
 
 ## Phase Details
@@ -171,7 +149,7 @@ data/
 │   └── report.json            # Final aggregated report
 │
 ├── ingest-checkpoints/
-│   └── {dataset}.json         # Global ingest state per provider
+│   └── {dataset}.json         # Ingest state per provider
 │
 ├── comparisons/
 │   └── {compareId}/
@@ -216,7 +194,7 @@ The Next.js frontend provides:
 | Page | Purpose |
 |------|---------|
 | `/runs` | List all evaluation runs with status, accuracy, filters |
-| `/runs/new` | Create new run (provider, benchmark, model, isolation mode) |
+| `/runs/new` | Create new run (provider, benchmark, model) |
 | `/runs/{id}` | Run detail: phase progress, accuracy by type, latency, retrieval |
 | `/runs/{id}/questions/{qid}` | Question drill-down: ground truth vs hypothesis, context |
 | `/compare` | List multi-provider comparisons |

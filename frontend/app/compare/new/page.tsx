@@ -19,7 +19,6 @@ export default function NewComparePage() {
   const [benchmarks, setBenchmarks] = useState<string[]>([])
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
   const [benchmark, setBenchmark] = useState("")
-  const [isolationMode, setIsolationMode] = useState("global")
   const [judgeModel, setJudgeModel] = useState("gpt-4o")
   const [answeringModel, setAnsweringModel] = useState("gpt-4o")
   const [limit, setLimit] = useState("")
@@ -40,7 +39,6 @@ export default function NewComparePage() {
       await startCompare({
         providers: selectedProviders, benchmark,
         judge_model: judgeModel, answering_model: answeringModel,
-        isolation_mode: isolationMode,
         limit: limit ? parseInt(limit) : undefined,
       })
       router.push("/compare")
@@ -65,14 +63,6 @@ export default function NewComparePage() {
         </div>
 
         <SingleSelect label="Benchmark" options={benchmarks.map((b) => ({ value: b, label: b }))} value={benchmark} onChange={setBenchmark} />
-
-        <SingleSelect label="Isolation Mode"
-          options={[
-            { value: "global", label: "Global", sublabel: "Shared container" },
-            { value: "isolated", label: "Isolated", sublabel: "Per-question container" },
-          ]}
-          value={isolationMode} onChange={setIsolationMode}
-        />
 
         <div className="grid grid-cols-2 gap-4">
           <SingleSelect label="Judge Model" options={MODELS} value={judgeModel} onChange={setJudgeModel} />

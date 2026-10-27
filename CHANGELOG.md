@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **LongMemEval-S runner for Synap**: `python -m benchmarks.longmemeval.run` ingests, retrieves, answers, judges and reports in one command, with resumable ingest checkpoints. See `docs/LONGMEMEVAL_S.md`.
+- Upstream LongMemEval judge scripts vendored under `benchmarks/longmemeval/upstream/` (MIT), with a test that the judge prompts are byte-identical.
+- Provider-agnostic LLM layer (LiteLLM) for the runner: `--answer-model` and `--judge-model` take `provider/model`.
+- `requirements-longmemeval.txt` (pins `maximem-synap==0.5.8`) and `configs/synap_longmemeval_s.yaml`.
+
+### Changed
+- `adapters/synap_adapter.py`: retrieval retries with backoff and raises `SearchExhausted` instead of returning an empty list; a degraded empty response is retried; ingest retries transient 5xx but never re-sends after a read timeout; indexing polls are bounded by wall-clock time and treat a 404 status as terminal; `customer_id` is sent only to B2B instances; the gRPC listen stream can be turned off by config.
+- `scripts/download_datasets.py` downloads to a `.part` file and renames on success, so an interrupted download is not mistaken for a finished one.
+
 ## [0.2.0] - 2026-05-05
 
 ### Added

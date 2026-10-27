@@ -273,12 +273,30 @@ async def judge_single(
     gold: str,
     model: str = "gpt-4o",
     question_type: str = "",
+    question_id: str = "",
 ) -> Dict:
     """Judge a single prediction against gold answer using LLM.
 
-    Selects a question-type-specific prompt when available (temporal,
-    knowledge-update, preference, adversarial); falls back to the default.
+    LongMemEval questions are scored with LongMemEval's own judge: its
+    question-type-specific yes/no prompt, one call, max_tokens 10, correct
+    when the reply contains "yes". Every other benchmark selects a
+    question-type-specific prompt when available (temporal, knowledge-update,
+    preference, adversarial) and falls back to the default.
     """
+    from benchmarks.longmemeval import judge as lme
+
+    if question_type in lme.QUESTION_TYPES:
+        try:
+            prompt = lme.get_anscheck_prompt(
+                question_type, question, gold, prediction,
+                abstention=lme.is_abstention(question_id))
+            raw = (await _llm_call(model, prompt, max_output_tokens=10) or "").strip()
+            if not raw:
+                return {"score": 0.0, "reason": "Judge error: empty reply"}
+            return {"score": 1.0 if lme.label_from_reply(raw) else 0.0, "reason": raw}
+        except Exception as e:
+            logger.error(f"LLM judge failed: {e}")
+            return {"score": 0.0, "reason": f"Judge error: {e}"}
     try:
         prompt_template = _select_judge_prompt(question_type, gold)
         text = await _llm_call(
@@ -483,7 +501,7 @@ def _compute_retrieval_metrics(
     Precision@K, F1@K, MRR, NDCG use MEMORY-ONLY relevance — because these
     measure the quality of the extracted/summarized items themselves.
 
-    Matches MemoryBench's computation for the memory-only metrics.
+    Standard computation for the memory-only retrieval metrics.
     """
     import math
 
@@ -517,7 +535,7 @@ def _compute_retrieval_metrics(
     first_relevant = next((i for i, r in enumerate(mem) if r == 1), -1)
     mrr = round(1.0 / (first_relevant + 1), 4) if first_relevant >= 0 else 0.0
 
-    # NDCG: MemoryBench places totalRelevant ones at the top as the ideal
+    # NDCG: the ideal ranking places all totalRelevant items at the top as the ideal
     dcg = sum(r / math.log2(i + 2) for i, r in enumerate(mem))
     ideal_scores = [1 if i < min(total_relevant, len(mem)) else 0 for i in range(len(mem))]
     idcg = sum(r / math.log2(i + 2) for i, r in enumerate(ideal_scores))
@@ -608,7 +626,7 @@ async def judge_retrieval_quality(
     Selects a question-type-aware retrieval eval prompt:
     - preference / single-session-preference → contextual usefulness criterion
     - multi-session → contribution-to-synthesis criterion
-    - all others → direct factual relevance (MemoryBench default)
+    - all others → direct factual relevance
 
     Returns two sets of relevance flags:
     - memory relevance: used for Precision@K, F1@K, MRR, NDCG

@@ -9,12 +9,13 @@ latency and retrieval quality.
 | Guide | Read it when |
 |---|---|
 | [Quickstart](QUICKSTART.md) | You want to install the harness and run an existing provider. |
+| [LongMemEval-S runner](LONGMEMEVAL_S.md) | You want to run LongMemEval-S against Synap from the command line with our settings. |
 | [Build Your Own Adapter](BUILD_YOUR_OWN_ADAPTER.md) | You want to benchmark your own memory system. |
 | [Provider Specification](ADAPTER_SPEC.md) | You need the exact interface: methods, types, lifecycle. |
 | [Deviations](DEVIATIONS.md) | You are comparing our numbers against a published paper. |
 | [Notes on Licenses](NOTES_ON_LICENSES.md) | You need dataset terms of use. |
 
-For pipeline internals (phases, checkpointing, evaluation modes, judge prompts,
+For pipeline internals (phases, checkpointing, containers, judge prompts,
 retrieval metrics) see [framework.md](../framework.md) at the repository root.
 
 ## What the harness does
@@ -39,8 +40,8 @@ documented in [Build Your Own Adapter](BUILD_YOUR_OWN_ADAPTER.md).
 
 ## Published results
 
-Benchmark results, full methodology and the cross-vendor configuration
-comparison live in
+Benchmark results (LongMemEval 95.2% on all 500 questions, LoCoMo 93.2%), full
+methodology, per-question records and the cross-vendor comparison live in
 [`maximem-ai/eval_benchmark_runs_output`](https://github.com/maximem-ai/eval_benchmark_runs_output).
 
 ## License

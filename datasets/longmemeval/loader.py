@@ -14,9 +14,8 @@ from typing import List, Dict, Any, Optional
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Auto-detect in preference order
+# Auto-detect in preference order: S, then M
 _VARIANTS = [
-    "longmemeval_interleaved.json",
     "longmemeval_s_cleaned.json",
     "longmemeval_m_cleaned.json",
 ]

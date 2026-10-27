@@ -262,8 +262,7 @@ class QuestionCheckpoint:
 
 
 RunStatus = Literal["initializing", "running", "completed", "failed"]
-IsolationMode = Literal["global", "isolated"]
-SelectionMode = Literal["full", "sample", "limit", "record", "curated", "interleaved"]
+SelectionMode = Literal["full", "sample", "limit", "record", "curated"]
 SampleType = Literal["consecutive", "random"]
 
 
@@ -284,7 +283,6 @@ class SamplingConfig:
 class RunCheckpoint:
     run_id: str
     global_container_tag: str
-    isolation_mode: IsolationMode = "global"
     status: RunStatus = "initializing"
     provider: str = ""
     benchmark: str = ""
@@ -431,7 +429,6 @@ class BenchmarkResult:
 @dataclass
 class BenchmarkConfig:
     data_path: Optional[str] = None
-    interleaved_path: Optional[str] = None
     top_sessions_per_question: Optional[int] = None
 
 

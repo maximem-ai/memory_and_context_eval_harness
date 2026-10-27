@@ -23,7 +23,7 @@ runner/              Core pipeline engine
   types.py           All type definitions (Provider, Benchmark, etc.)
   checkpoint.py      Run checkpoint manager
   phases/            Pipeline phase implementations
-    global_ingest.py   Session ingestion (global + isolated)
+    ingest.py          Session ingestion
     search.py          Context retrieval
     answer.py          LLM answer generation
     evaluate.py        Judge scoring + retrieval metrics
@@ -72,7 +72,7 @@ class YourProvider(Provider):
 
     async def ingest(self, sessions: list[UnifiedSession], options: IngestOptions) -> IngestResult:
         # Ingest sessions into your provider
-        # options.container_tag is the namespace for data isolation
+        # options.container_tag is the namespace for one question's data
         # Return IngestResult with document_ids and session_ingestions
         pass
 
@@ -227,7 +227,7 @@ Understanding the pipeline helps when debugging or extending:
 ```
 1. INGEST     Sessions loaded from benchmark → formatted → sent to provider
               Checkpoint: tracks which sessions are ingested per provider
-              Modes: global (one container) or isolated (per-question containers)
+              One container per question
 
 2. SEARCH     For each question → provider.search(question, container_tag)
               Results saved to: data/runs/{runId}/results/{questionId}.json

@@ -9,7 +9,6 @@ export default function IngestPage() {
   const [benchmarks, setBenchmarks] = useState<string[]>([])
   const [provider, setProvider] = useState("")
   const [benchmark, setBenchmark] = useState("")
-  const [isolationMode, setIsolationMode] = useState("global")
   const [containerTagPrefix, setContainerTagPrefix] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [activeIngest, setActiveIngest] = useState<{ provider: string; benchmark: string } | null>(null)
@@ -55,8 +54,8 @@ export default function IngestPage() {
     setActiveIngest({ provider, benchmark })
     try {
       await startIngest({
-        provider, benchmark, isolation_mode: isolationMode,
-        container_tag_prefix: isolationMode === "isolated" && containerTagPrefix ? containerTagPrefix : undefined,
+        provider, benchmark,
+        container_tag_prefix: containerTagPrefix || undefined,
       })
       // Start polling immediately
       refreshStatus()
@@ -77,26 +76,11 @@ export default function IngestPage() {
           <SingleSelect label="Provider" options={providers.map((p) => ({ value: p, label: p }))} value={provider} onChange={setProvider} placeholder="Select provider" />
           <SingleSelect label="Benchmark" options={benchmarks.map((b) => ({ value: b, label: b }))} value={benchmark} onChange={setBenchmark} placeholder="Select benchmark" />
         </div>
-        <SingleSelect
-          label="Isolation Mode"
-          options={[
-            { value: "global", label: "Global", sublabel: "All sessions in one shared container" },
-            { value: "isolated", label: "Isolated", sublabel: "Separate container per question (slower)" },
-          ]}
-          value={isolationMode} onChange={setIsolationMode}
-        />
-        {isolationMode === "isolated" && (
-          <>
-            <div className="text-xs text-warning bg-warning/10 rounded px-3 py-2 mt-3">
-              Isolated mode creates a separate container per question. This is significantly slower but ensures each question only sees its relevant sessions.
-            </div>
-            <div className="mt-3">
-              <label className="block text-xs text-fg-muted mb-1.5 font-medium">Container Tag Prefix (optional)</label>
-              <input type="text" value={containerTagPrefix} onChange={(e) => setContainerTagPrefix(e.target.value)} placeholder={`${benchmark || "benchmark"}-${provider || "provider"}`} className="input w-full text-sm font-mono" />
-              <p className="text-[10px] text-fg-muted mt-1">Per-question container: <code className="text-fg-secondary">{`{prefix}_{question_id}`}</code>. Use to match existing ingested data.</p>
-            </div>
-          </>
-        )}
+        <div className="mt-3">
+          <label className="block text-xs text-fg-muted mb-1.5 font-medium">Container Tag Prefix (optional)</label>
+          <input type="text" value={containerTagPrefix} onChange={(e) => setContainerTagPrefix(e.target.value)} placeholder={`${benchmark || "benchmark"}-${provider || "provider"}`} className="input w-full text-sm font-mono" />
+          <p className="text-[10px] text-fg-muted mt-1">Per-question container: <code className="text-fg-secondary">{`{prefix}_{question_id}`}</code>. Use to match existing ingested data.</p>
+        </div>
         <button onClick={handleIngest} disabled={submitting || !provider || !benchmark} className="btn btn-primary mt-4">
           {submitting ? "Starting..." : "Start Ingestion"}
         </button>

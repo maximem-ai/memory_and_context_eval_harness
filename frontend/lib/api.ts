@@ -5,7 +5,6 @@ export interface RunSummary {
   provider: string
   benchmark: string
   status: string
-  isolation_mode: string
   created_at: string
   updated_at: string
 }
@@ -13,7 +12,6 @@ export interface RunSummary {
 export interface RunDetail extends RunSummary {
   judge: string
   answeringModel: string
-  isolationMode: string
   accuracy: number | null
   summary: { total: number; searched: number; answered: number; evaluated: number }
   questions: Record<string, QuestionCheckpoint>

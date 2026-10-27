@@ -1,7 +1,7 @@
 """
 Orchestrator — coordinates the 5-phase benchmark pipeline.
 
-Pipeline: Global Ingest → Global Indexing → Search → Answer → Evaluate → Report
+Pipeline: Ingest → Search → Answer → Evaluate → Report
 
 Supports:
 - Single provider runs
@@ -26,7 +26,6 @@ from runner.types import (
     BenchmarkResult,
     resolve_concurrency,
     ConcurrencyConfig,
-    IsolationMode,
     PhaseId,
     Provider,
     ProviderConfig,
@@ -110,19 +109,18 @@ class Orchestrator:
         await benchmark.load()
         return benchmark
 
-    # ── Global Ingest ─────────────────────────────────────────────────
+    # ── Ingest ────────────────────────────────────────────────────────
 
-    async def global_ingest(
+    async def ingest(
         self,
         provider_name: str,
         benchmark_name: str,
-        isolation_mode: IsolationMode = "global",
         provider_config: Optional[Dict[str, Any]] = None,
         container_tag_prefix: Optional[str] = None,
         on_progress: Optional[Callable] = None,
         max_groups: Optional[int] = None,
     ) -> str:
-        """Ingest benchmark data into a provider. Returns container_tag (or sentinel for isolated)."""
+        """Ingest benchmark data into a provider. Returns the container tag prefix."""
         ingest_key = f"{provider_name}-{benchmark_name}"
         if self._active_ingests.get(ingest_key):
             logger.info("[%s] Ingestion already in progress for %s, skipping", provider_name, benchmark_name)
@@ -130,7 +128,7 @@ class Orchestrator:
 
         self._active_ingests[ingest_key] = True
         try:
-            return await self._do_ingest(provider_name, benchmark_name, isolation_mode, provider_config, container_tag_prefix, on_progress, max_groups)
+            return await self._do_ingest(provider_name, benchmark_name, provider_config, container_tag_prefix, on_progress, max_groups)
         finally:
             self._active_ingests.pop(ingest_key, None)
 
@@ -138,7 +136,6 @@ class Orchestrator:
         self,
         provider_name: str,
         benchmark_name: str,
-        isolation_mode: IsolationMode = "global",
         provider_config: Optional[Dict[str, Any]] = None,
         container_tag_prefix: Optional[str] = None,
         on_progress: Optional[Callable] = None,
@@ -155,38 +152,22 @@ class Orchestrator:
             "provider": provider_name,
             "benchmark": benchmark_name,
             "container_tag": container_tag,
-            "isolation_mode": isolation_mode,
         })
 
-        if isolation_mode == "isolated":
-            from runner.phases.global_ingest import run_isolated_ingest
-            await run_isolated_ingest(
-                provider, benchmark, provider_name, benchmark_name,
-                checkpoint, self.ingest_mgr,
-                container_tag_prefix=container_tag_prefix,
-                on_progress=on_progress or self._ingest_progress,
-                max_groups=max_groups,
-            )
-        else:
-            from runner.phases.global_ingest import run_global_ingest
-            await run_global_ingest(
-                provider, benchmark, container_tag,
-                checkpoint, self.ingest_mgr,
-                on_progress=on_progress or self._ingest_progress,
-            )
-
-            from runner.phases.global_indexing import run_global_indexing
-            await run_global_indexing(
-                provider, checkpoint, self.ingest_mgr,
-                on_progress=on_progress or self._ingest_progress,
-            )
+        from runner.phases.ingest import run_ingest
+        await run_ingest(
+            provider, benchmark, provider_name, benchmark_name,
+            checkpoint, self.ingest_mgr,
+            container_tag_prefix=container_tag_prefix,
+            on_progress=on_progress or self._ingest_progress,
+            max_groups=max_groups,
+        )
 
         self._broadcast({
             "type": "ingest_complete",
             "provider": provider_name,
             "benchmark": benchmark_name,
             "container_tag": container_tag,
-            "isolation_mode": isolation_mode,
         })
 
         return container_tag
@@ -200,7 +181,6 @@ class Orchestrator:
         judge_model: str = "gpt-4o",
         answering_model: str = "gpt-4o",
         run_id: Optional[str] = None,
-        isolation_mode: IsolationMode = "global",
         sampling: Optional[SamplingConfig] = None,
         concurrency: Optional[ConcurrencyConfig] = None,
         phases: Optional[List[PhaseId]] = None,
@@ -233,7 +213,6 @@ class Orchestrator:
                 global_container_tag=container_tag,
                 judge=judge_model,
                 answering_model=answering_model,
-                isolation_mode=isolation_mode,
                 sampling=sampling,
                 concurrency=concurrency,
                 provider_config=provider_config,
@@ -273,15 +252,11 @@ class Orchestrator:
             questions = questions[:sampling.limit]
 
         for q in questions:
-            # In isolated mode, each question gets the container of its
-            # haystack group (record for Locomo/DMR, question for LongMemEval).
-            # Benchmark.get_question_group_id defaults to question_id so
-            # per-question isolation is preserved where appropriate.
-            if isolation_mode == "isolated":
-                group_id = benchmark.get_question_group_id(q.question_id)
-                q_container_tag = f"{container_tag}_{group_id}"
-            else:
-                q_container_tag = container_tag
+            # Each question gets the container of its haystack group (record
+            # for LoCoMo, question for LongMemEval). Benchmark.get_question_group_id
+            # defaults to question_id, so each question keeps its own haystack.
+            group_id = benchmark.get_question_group_id(q.question_id)
+            q_container_tag = f"{container_tag}_{group_id}"
 
             self.checkpoint_mgr.init_question(
                 checkpoint, q.question_id, q_container_tag,
@@ -433,7 +408,6 @@ class Orchestrator:
         benchmark_name: str,
         judge_model: str = "gpt-4o",
         answering_model: str = "gpt-4o",
-        isolation_mode: IsolationMode = "global",
         sampling: Optional[SamplingConfig] = None,
         concurrency: Optional[ConcurrencyConfig] = None,
         system_prompt: str = "",
@@ -446,7 +420,6 @@ class Orchestrator:
             "type": "compare_start",
             "providers": provider_names,
             "benchmark": benchmark_name,
-            "isolation_mode": isolation_mode,
         })
 
         # Run providers concurrently
@@ -457,8 +430,7 @@ class Orchestrator:
                     benchmark_name=benchmark_name,
                     judge_model=judge_model,
                     answering_model=answering_model,
-                    isolation_mode=isolation_mode,
-                    sampling=sampling,
+                        sampling=sampling,
                     concurrency=concurrency,
                     system_prompt=system_prompt,
                     force=force,
