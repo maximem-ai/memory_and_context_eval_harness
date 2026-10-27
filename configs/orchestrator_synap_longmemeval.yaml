@@ -1,4 +1,4 @@
-# Synap Orchestrator — gpt-5.4 answer + gpt-4o judge, as in the published LongMemEval run
+# Synap Orchestrator — gpt-5.4 answer + gpt-4o judge
 # Single-pipeline (LongMemEval) by default. Enable LoCoMo when ingested.
 
 orchestrator:

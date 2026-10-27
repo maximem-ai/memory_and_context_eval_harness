@@ -30,8 +30,8 @@ export default function NewRunPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
-  // Defaults follow the published runs: LongMemEval answers with gpt-5.4 and is
-  // judged by gpt-4o; LoCoMo uses gpt-5-mini for both.
+  // Defaults: LongMemEval answers with gpt-5.4 and is judged by gpt-4o;
+  // LoCoMo uses gpt-5-mini for both.
   useEffect(() => {
     if (benchmark === "longmemeval") { setAnsweringModel("gpt-5.4"); setJudgeModel("gpt-4o") }
     if (benchmark === "locomo") { setAnsweringModel("gpt-5-mini"); setJudgeModel("gpt-5-mini") }

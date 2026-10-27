@@ -38,7 +38,7 @@ The harness evaluates against the official public distributions of LongMemEval
 bundled in this repository. See
 [NOTES_ON_LICENSES.md](NOTES_ON_LICENSES.md) for their terms.
 
-`--variant s` is the 500-question set the published LongMemEval results use
+`--variant s` is the 500-question set the harness runs by default
 (`gpt-5.4` answer model, `gpt-4o` judge), and is about 277 MB and the default. `--variant m` fetches the much larger M split (about
 2.7 GB). Pass
 `--dataset locomo` or `--dataset longmemeval` to fetch only one.

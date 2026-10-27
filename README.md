@@ -51,7 +51,7 @@ If port 8766 is taken, set `EVAL_HARNESS_PORT=8767` for the server and `NEXT_PUB
 
 ## Run LongMemEval-S against Synap from the command line
 
-A standalone runner that uses the same settings as our published LongMemEval-S configuration. It needs no dashboard and no other providers. All options are in [docs/LONGMEMEVAL_S.md](docs/LONGMEMEVAL_S.md).
+A standalone runner that uses the LongMemEval-S settings this harness ships with. It needs no dashboard and no other providers. All options are in [docs/LONGMEMEVAL_S.md](docs/LONGMEMEVAL_S.md).
 
 ```bash
 pip install -r requirements-longmemeval.txt      # pins maximem-synap==0.5.8

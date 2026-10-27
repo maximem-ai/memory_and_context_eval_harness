@@ -13,7 +13,7 @@ resampling, no relabeling. The `--variant s` flag selects it.
 `gpt-4o`, the model the paper's script uses. The answer model is `gpt-5.4`. Abstention questions
 use the upstream abstention prompt.
 
-**Abstention.** The published all-500 figure (95.2%, 476 of 500) includes the 30 abstention
+**Abstention.** The all-500 figure (95.2%, 476 of 500) includes the 30 abstention
 questions. The answerable-only figure (95.5%, 449 of 470) excludes them.
 
 **Retrieval metric.** Recall@20 (98.1%, 461 of 470) is a hit when `gpt-4o` judges at least one of
@@ -31,7 +31,7 @@ harness should only be compared against other Category 1 to 4 numbers.
 
 **Judge.** Same binary judge and same model as LongMemEval.
 
-**Repetition.** The published figure is a single run, not a mean across seeds.
+**Repetition.** The figure is a single run, not a mean across seeds.
 
 ## Cross-vendor comparison
 
