@@ -21,7 +21,7 @@ report. Your adapter is only involved in the first two.
 ```
    your adapter                       the harness
    ─────────────                      ───────────
-   ingest(sessions)      <────  here are 940 conversations, store them
+   ingest(sessions)      <────  here are the haystack sessions, store them
    await_indexing()      <────  tell me when they are actually searchable
    search(question)      <────  question 1 of 500, what context is relevant?
                           ────> feeds your context to the answer model
