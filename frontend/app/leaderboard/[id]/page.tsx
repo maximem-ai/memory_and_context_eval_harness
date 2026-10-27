@@ -32,7 +32,6 @@ export default function LeaderboardEntryPage() {
         <h1 className="text-xl font-display font-semibold capitalize">{entry.provider}</h1>
         <span className="badge badge-neutral">v{entry.version}</span>
         <span className="badge badge-neutral capitalize">{entry.benchmark}</span>
-        <span className="badge badge-neutral text-[10px]">{entry.isolationMode || "global"}</span>
       </div>
 
       <div className="flex items-center gap-6 text-sm text-fg-muted mb-6">

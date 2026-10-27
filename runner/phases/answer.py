@@ -7,6 +7,7 @@ the configured answering model.
 
 import logging
 import os
+import re
 import time
 from typing import Any, Callable, Dict, Optional
 
@@ -38,6 +39,23 @@ Retrieved Context (raw JSON from memory provider):
 Answer:"""
 
 
+_SUFFIX_BLOCK = re.compile(r"<!-- suffix:begin -->.*?<!-- suffix:end -->", re.S)
+
+
+def _render_system_prompt(text: str) -> str:
+    """Turn a prompt template into plain system-prompt text.
+
+    A template may carry a `{question}`/`{context}` suffix block and chunk
+    markers for the standalone runner. Here the question and context are sent
+    in the user message, so the suffix is dropped and the chunk markers are
+    resolved with source chunks included.
+    """
+    from benchmarks.common import apply_chunk_mode
+
+    text = _SUFFIX_BLOCK.sub("", text)
+    return apply_chunk_mode(text, include_chunks=True)[0].strip()
+
+
 def _load_default_system_prompt(benchmark_name: str = "") -> str:
     """Load the answer system prompt for the given benchmark.
 
@@ -55,9 +73,34 @@ def _load_default_system_prompt(benchmark_name: str = "") -> str:
     for path in candidates:
         if os.path.exists(path):
             with open(path, "r") as f:
-                return f.read().strip()
+                return _render_system_prompt(f.read())
     logger.warning("No default system prompt found in %s", PROMPTS_DIR)
     return "You are a helpful assistant with access to conversation memory."
+
+
+def _use_longmemeval_prompt(benchmark: Benchmark, system_prompt: str) -> bool:
+    """True when this is a LongMemEval run on the shipped, unmodified prompt."""
+    return (getattr(benchmark, "name", "") == "longmemeval"
+            and system_prompt == _load_default_system_prompt("longmemeval"))
+
+
+def _build_longmemeval_prompt(question: str, results: list, question_date: Optional[str]) -> str:
+    """Build the answer message exactly as the standalone LongMemEval-S runner does.
+
+    One user message: the prompt, a current-date line, then the question and
+    the retrieved memories rendered as text (with source chunks and metadata),
+    not as raw JSON.
+    """
+    from benchmarks.common import apply_chunk_mode
+    from benchmarks.longmemeval.run import build_answer_prompt
+
+    path = os.path.join(PROMPTS_DIR, "longmemeval_agent.md")
+    if not os.path.exists(path):
+        path = DEFAULT_SYSTEM_PROMPT_PATH
+    with open(path, "r") as f:
+        template, _ = apply_chunk_mode(f.read(), True)
+    return build_answer_prompt(template, question, results, question_date,
+                               include_chunks=True, include_metadata=True)
 
 
 async def answer_one(
@@ -83,13 +126,17 @@ async def answer_one(
         search_data = checkpoint_mgr.load_search_results(checkpoint.run_id, question_id)
         results = search_data.get("results", []) if search_data else []
 
-        prompt = _build_answer_prompt(
-            qcp.question,
-            results,
-            qcp.question_date,
-            provider,
-            system_prompt,
-        )
+        if _use_longmemeval_prompt(benchmark, system_prompt):
+            prompt = _build_longmemeval_prompt(qcp.question, results, qcp.question_date)
+            system_prompt = ""
+        else:
+            prompt = _build_answer_prompt(
+                qcp.question,
+                results,
+                qcp.question_date,
+                provider,
+                system_prompt,
+            )
 
         hypothesis = await _call_llm(prompt, answering_model, system_prompt)
         duration_ms = round((time.monotonic() - t0) * 1000, 1)

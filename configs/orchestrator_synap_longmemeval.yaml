@@ -1,0 +1,52 @@
+# Synap Orchestrator — gpt-5.4 answer + gpt-4o judge, as in the published LongMemEval run
+# Single-pipeline (LongMemEval) by default. Enable LoCoMo when ingested.
+
+orchestrator:
+  adapter:
+    name: "synap"
+    module: "adapters.synap_adapter.SynapProvider"
+    config_path: "./configs/synap.yaml"
+
+  llm:
+    model: "gpt-5.4"
+    provider: "openai"
+    judge_model: "gpt-4o"
+    temperature: 0.0
+
+  # Per-benchmark prompt routing (qa_agent.md fallback + {benchmark}_agent.md override)
+  agent_max_iterations: 5
+  eval_concurrency: 3
+  output_dir: "./results/orchestrator"
+  checkpoint_dir: "./checkpoints/orchestrator"
+
+pipelines:
+  longmemeval:
+    enabled: true
+    dataset: "longmemeval"
+    user_id: "longmemeval_bench_user"
+    ingestion_method: "longterm"
+    ingestion_buffer_seconds: 30
+    max_records: 0
+    max_questions: 0
+    retrieval_mode: "accurate"
+    retrieval_max_results: 50
+    batch_ingest: true
+    batch_size: 50
+
+  locomo:
+    enabled: false
+    dataset: "locomo"
+    user_id: "locomo_bench_user"
+    ingestion_method: "longterm"
+    ingestion_buffer_seconds: 30
+    max_records: 0
+    max_questions: 0
+    retrieval_mode: "accurate"
+    retrieval_max_results: 50
+    batch_ingest: true
+    batch_size: 50
+
+scoring:
+  scorers:
+    - "llm_judge"
+  run_after_completion: true

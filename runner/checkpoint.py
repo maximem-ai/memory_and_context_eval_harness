@@ -94,7 +94,6 @@ class CheckpointManager:
         global_container_tag: str,
         judge: str = "",
         answering_model: str = "",
-        isolation_mode: str = "global",
         sampling: Optional[SamplingConfig] = None,
         concurrency: Optional[ConcurrencyConfig] = None,
         target_question_ids: Optional[List[str]] = None,
@@ -105,7 +104,6 @@ class CheckpointManager:
         cp = RunCheckpoint(
             run_id=run_id,
             global_container_tag=global_container_tag,
-            isolation_mode=isolation_mode,
             status="initializing",
             provider=provider,
             benchmark=benchmark,
@@ -327,7 +325,6 @@ class CheckpointManager:
                         "provider": data.get("provider", ""),
                         "benchmark": data.get("benchmark", ""),
                         "status": data.get("status", ""),
-                        "isolation_mode": data.get("isolation_mode", "global"),
                         "created_at": data.get("created_at", ""),
                         "updated_at": data.get("updated_at", ""),
                     })
@@ -343,7 +340,6 @@ class CheckpointManager:
         data = {
             "run_id": cp.run_id,
             "global_container_tag": cp.global_container_tag,
-            "isolation_mode": cp.isolation_mode,
             "status": cp.status,
             "provider": cp.provider,
             "benchmark": cp.benchmark,
@@ -382,7 +378,6 @@ class CheckpointManager:
         cp = RunCheckpoint(
             run_id=data["run_id"],
             global_container_tag=data.get("global_container_tag", ""),
-            isolation_mode=data.get("isolation_mode", "global"),
             status=data.get("status", "initializing"),
             provider=data.get("provider", ""),
             benchmark=data.get("benchmark", ""),

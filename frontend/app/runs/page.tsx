@@ -61,7 +61,6 @@ export default function RunsPage() {
         {["running", "initializing"].includes(r.status) && <CircularProgress progress={0.5} />}
       </div>
     )},
-    { key: "isolation", header: "Mode", render: (r: any) => <span className="badge badge-neutral text-[10px]">{r.isolation_mode || "global"}</span> },
     { key: "date", header: "Date", render: (r: any) => <span className="text-fg-muted text-xs">{formatDate(r.created_at)}</span> },
     { key: "actions", header: "", width: "48px", render: (r: any) => (
       <DropdownMenu items={[

@@ -2,9 +2,10 @@
 instance_id: "${SYNAP_INSTANCE_ID}"
 api_key: "${SYNAP_API_KEY}"
 base_url: "${SYNAP_BASE_URL}"
-# mode: "ACCURATE"
-mode: "FAST"
+mode: "ACCURATE"
+retrieval_mode: "accurate"
 top_k: 50
+retrieval_max_results: 50
 default_user_id: "benchmark_user"
 
 # gRPC settings

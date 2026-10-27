@@ -5,6 +5,7 @@ import { getProviders, getBenchmarks, startRun, startIngest } from "@/lib/api"
 import SingleSelect from "@/components/single-select"
 
 const MODELS = [
+  { value: "gpt-5.4", label: "GPT-5.4" },
   { value: "gpt-4o", label: "GPT-4o" },
   { value: "gpt-4o-mini", label: "GPT-4o Mini" },
   { value: "o4-mini", label: "o4-mini" },
@@ -19,9 +20,8 @@ export default function NewRunPage() {
   const [benchmarks, setBenchmarks] = useState<string[]>([])
   const [provider, setProvider] = useState("")
   const [benchmark, setBenchmark] = useState("")
-  const [isolationMode, setIsolationMode] = useState("global")
   const [judgeModel, setJudgeModel] = useState("gpt-4o")
-  const [answeringModel, setAnsweringModel] = useState("gpt-4o")
+  const [answeringModel, setAnsweringModel] = useState("gpt-5.4")
   const [limit, setLimit] = useState("")
   const [retrievalMode, setRetrievalMode] = useState("accurate")
   const [containerTagPrefix, setContainerTagPrefix] = useState("")
@@ -29,6 +29,13 @@ export default function NewRunPage() {
   const [ingestFirst, setIngestFirst] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+
+  // Defaults follow the published runs: LongMemEval answers with gpt-5.4 and is
+  // judged by gpt-4o; LoCoMo uses gpt-5-mini for both.
+  useEffect(() => {
+    if (benchmark === "longmemeval") { setAnsweringModel("gpt-5.4"); setJudgeModel("gpt-4o") }
+    if (benchmark === "locomo") { setAnsweringModel("gpt-5-mini"); setJudgeModel("gpt-5-mini") }
+  }, [benchmark])
 
   useEffect(() => {
     getProviders().then(setProviders)
@@ -40,11 +47,10 @@ export default function NewRunPage() {
     setSubmitting(true); setError("")
     try {
       if (ingestFirst) {
-        await startIngest({ provider, benchmark, isolation_mode: isolationMode })
+        await startIngest({ provider, benchmark })
       }
       const result = await startRun({
         provider, benchmark, judge_model: judgeModel, answering_model: answeringModel,
-        isolation_mode: isolationMode,
         retrieval_mode: provider === "synap" ? retrievalMode : undefined,
         container_tag_prefix: containerTagPrefix || undefined,
         limit: limit ? parseInt(limit) : undefined,
@@ -73,15 +79,6 @@ export default function NewRunPage() {
           <SingleSelect label="Benchmark" options={benchmarks.map((b) => ({ value: b, label: b }))} value={benchmark} onChange={setBenchmark} placeholder="Select benchmark" />
         </div>
 
-        <SingleSelect
-          label="Isolation Mode"
-          options={[
-            { value: "global", label: "Global", sublabel: "Shared container for all sessions — fast, cross-session reasoning" },
-            { value: "isolated", label: "Isolated", sublabel: "Separate container per question — clean evaluation, no cross-contamination" },
-          ]}
-          value={isolationMode} onChange={setIsolationMode}
-        />
-
         <div className={`grid gap-4 ${provider === "synap" ? "grid-cols-3" : "grid-cols-2"}`}>
           <SingleSelect label="Judge Model" options={MODELS} value={judgeModel} onChange={setJudgeModel} />
           <SingleSelect label="Answering Model" options={MODELS} value={answeringModel} onChange={setAnsweringModel} />
@@ -101,10 +98,7 @@ export default function NewRunPage() {
           <label className="block text-xs text-fg-muted mb-1.5 font-medium">Container Tag / Entity ID (optional)</label>
           <input type="text" value={containerTagPrefix} onChange={(e) => setContainerTagPrefix(e.target.value)} placeholder={`${benchmark || "benchmark"}-${provider || "provider"}`} className="input w-full text-sm font-mono" />
           <p className="text-[10px] text-fg-muted mt-1">
-            {isolationMode === "isolated"
-              ? <span>Per-question container: <code className="text-fg-secondary">{containerTagPrefix || `${benchmark || "benchmark"}-${provider || "provider"}`}_{"{question_id}"}</code></span>
-              : <span>Leave empty to use default: <code className="text-fg-secondary">{`${benchmark || "benchmark"}-${provider || "provider"}`}</code></span>
-            }
+            Per-question container: <code className="text-fg-secondary">{containerTagPrefix || `${benchmark || "benchmark"}-${provider || "provider"}`}_{"{question_id}"}</code>
           </p>
         </div>
 
