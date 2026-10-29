@@ -5,7 +5,7 @@ import { getProviders, getBenchmarks, startRun, startIngest } from "@/lib/api"
 import SingleSelect from "@/components/single-select"
 
 const MODELS = [
-  { value: "gpt-5.4", label: "GPT-5.4" },
+  { value: "gemini-3.8-flash", label: "Gemini 3.8 Flash" },
   { value: "gpt-4o", label: "GPT-4o" },
   { value: "gpt-4o-mini", label: "GPT-4o Mini" },
   { value: "o4-mini", label: "o4-mini" },
@@ -21,7 +21,7 @@ export default function NewRunPage() {
   const [provider, setProvider] = useState("")
   const [benchmark, setBenchmark] = useState("")
   const [judgeModel, setJudgeModel] = useState("gpt-4o")
-  const [answeringModel, setAnsweringModel] = useState("gpt-5.4")
+  const [answeringModel, setAnsweringModel] = useState("gemini-3.8-flash")
   const [limit, setLimit] = useState("")
   const [retrievalMode, setRetrievalMode] = useState("accurate")
   const [containerTagPrefix, setContainerTagPrefix] = useState("")
@@ -30,10 +30,10 @@ export default function NewRunPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
-  // Defaults: LongMemEval answers with gpt-5.4 and is judged by gpt-4o;
+  // Defaults: LongMemEval answers with gemini-3.8-flash and is judged by gpt-4o;
   // LoCoMo uses gpt-5-mini for both.
   useEffect(() => {
-    if (benchmark === "longmemeval") { setAnsweringModel("gpt-5.4"); setJudgeModel("gpt-4o") }
+    if (benchmark === "longmemeval") { setAnsweringModel("gemini-3.8-flash"); setJudgeModel("gpt-4o") }
     if (benchmark === "locomo") { setAnsweringModel("gpt-5-mini"); setJudgeModel("gpt-5-mini") }
   }, [benchmark])
 

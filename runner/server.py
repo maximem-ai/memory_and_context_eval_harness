@@ -143,7 +143,7 @@ async def start_run(body: Dict[str, Any]):
     provider = body.get("provider", "synap")
     benchmark = body.get("benchmark", "longmemeval")
     judge = body.get("judge_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-4o")
-    model = body.get("answering_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-5.4")
+    model = body.get("answering_model", "gpt-5-mini" if benchmark == "locomo" else "gemini-3.8-flash")
     run_id = body.get("run_id")
     force = body.get("force", False)
     phases = body.get("phases")
@@ -394,7 +394,7 @@ async def start_compare(body: Dict[str, Any]):
     providers = body.get("providers", [])
     benchmark = body.get("benchmark", "longmemeval")
     judge = body.get("judge_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-4o")
-    model = body.get("answering_model", "gpt-5-mini" if benchmark == "locomo" else "gpt-5.4")
+    model = body.get("answering_model", "gpt-5-mini" if benchmark == "locomo" else "gemini-3.8-flash")
     force = body.get("force", False)
     limit = body.get("limit")
     compare_id = body.get("compare_id") or f"compare-{datetime.now().strftime('%Y%m%d-%H%M%S')}"

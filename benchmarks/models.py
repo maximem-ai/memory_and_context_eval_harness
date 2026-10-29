@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 from typing import Dict, Optional, Tuple
 
-DEFAULT_ANSWER_MODEL = "openai/gpt-5.4-2026-03-05"
+DEFAULT_ANSWER_MODEL = "gemini/gemini-3.8-flash"
 DEFAULT_JUDGE_MODEL = "openai/gpt-4o"
 
 CHUNK_MODES = ("with", "without")
