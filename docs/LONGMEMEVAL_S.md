@@ -23,7 +23,8 @@ Set in `.env`:
 | `SYNAP_API_KEY` | Synap API key |
 | `SYNAP_INSTANCE_ID` | Synap instance id |
 | `SYNAP_BASE_URL` | Optional. Defaults to `https://synap-cloud-prod.maximem.ai` |
-| `OPENAI_API_KEY` | The default answer model and the judge are OpenAI. Set the key for whichever provider you choose instead (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`). |
+| `GEMINI_API_KEY` | The default answer model is Gemini. Set the key for whichever provider you choose instead (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`). |
+| `OPENAI_API_KEY` | The default judge is `gpt-4o`. Needed unless you change the judge, which makes the score not comparable. |
 
 Download the data (about 277 MB, not committed):
 
@@ -84,7 +85,7 @@ repeated. A question that ended in an error is **retried** on resume.
 | Indexing poll | 3 s up to 15 s, timeout 10800 s, status concurrency 10 |
 | Question date sent to search | no |
 | Answer prompt | `prompts/qa_agent_subjects_used.md` (`--answer-prompt default`) |
-| Answer model | `openai/gpt-5.4-2026-03-05`, temperature 0, seed 7 where supported |
+| Answer model | `gemini/gemini-3.8-flash`, temperature 0, seed 7 where supported |
 | Source chunks (`source_evidence`) in prompt | with (`--chunks with`) |
 | Memory metadata in prompt | on (`--metadata on`) |
 | Current date line | added by the runner (`## Current date`) |

@@ -10,17 +10,17 @@ produced elsewhere without having to read the source to find the differences.
 resampling, no relabeling. The `--variant s` flag selects it.
 
 **Judge.** LongMemEval's own judge (`evaluate_qa.py`, per-question-type yes/no prompts) with
-`gpt-4o`, the model the paper's script uses. The answer model is `gpt-5.4`. Abstention questions
+`gpt-4o`, the model the paper's script uses. The answer model is `gemini-3.8-flash`. Abstention questions
 use the upstream abstention prompt.
 
-**Abstention.** The all-500 figure (95.2%, 476 of 500) includes the 30 abstention
-questions. The answerable-only figure (95.5%, 449 of 470) excludes them.
+**Abstention.** The all-500 figure (95.6%, 478 of 500) includes the 30 abstention
+questions. The answerable-only figure (95.7%, 450 of 470) excludes them.
 
 **Retrieval metric.** Recall@20 (98.1%, 461 of 470) is a hit when `gpt-4o` judges at least one of
 the first 20 retrieved memories relevant to the question and gold answer. The relevance prompt is the
 one Supermemory uses for its published 97% Recall@20. It is an LLM-judged hit rate, not a labelled one.
 
-**Repetition.** Single run (2026-10-13), not a mean across seeds.
+**Repetition.** Single run (October 2026), not a mean across seeds.
 
 ## LoCoMo
 

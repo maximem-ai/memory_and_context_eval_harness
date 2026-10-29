@@ -12,13 +12,12 @@ Memory benchmark numbers are hard to compare because every vendor runs them diff
 
 | Benchmark | Scope | Provider | Result |
 |---|---|---|---|
-| LongMemEval | Answerable, excluding 3 dataset-defect questions | Synap | [**96.1%**](https://github.com/maximem-ai/eval_benchmark_runs_output) (449 of 467) |
-| LongMemEval | 470 answerable questions (30 abstention excluded) | Synap | [**95.5%**](https://github.com/maximem-ai/eval_benchmark_runs_output) (449 of 470) |
-| LongMemEval | All 500 questions | Synap | [**95.2%**](https://github.com/maximem-ai/eval_benchmark_runs_output) (476 of 500) |
+| LongMemEval | 470 answerable questions (30 abstention excluded) | Synap | [**95.7%**](https://github.com/maximem-ai/eval_benchmark_runs_output) (450 of 470) |
+| LongMemEval | All 500 questions | Synap | [**95.6%**](https://github.com/maximem-ai/eval_benchmark_runs_output) (478 of 500) |
 | LongMemEval retrieval | Recall@20, 470 answerable questions | Synap | [**98.1%**](https://github.com/maximem-ai/eval_benchmark_runs_output) (461 of 470) |
 | LoCoMo | 1,540 questions, categories 1 to 4 (adversarial excluded) | Synap | [**93.2%**](https://github.com/maximem-ai/eval_benchmark_runs_output) |
 
-LongMemEval: `LongMemEval_S`, run 2026-10-13, single run, `gpt-5.4` answer model, `gpt-4o` judge with LongMemEval's own per-question-type prompts. LoCoMo: single run, `gpt-5-mini` as answer model and judge, binary CORRECT/WRONG. Recall@20 counts a question as a hit when `gpt-4o` judges at least one of the first 20 retrieved memories relevant, using the same relevance prompt Supermemory uses for its published 97% Recall@20, so the two are directly comparable in method. Per-question records, the answer prompt and the relevance labels are in the [results repo](https://github.com/maximem-ai/eval_benchmark_runs_output), together with each vendor's own published numbers, which were not re-run here. Details: [docs/DEVIATIONS.md](docs/DEVIATIONS.md).
+LongMemEval: `LongMemEval_S`, run October 2026, single run, `gemini-3.8-flash` answer model, `gpt-4o` judge with LongMemEval's own per-question-type prompts. LoCoMo: single run, `gpt-5-mini` as answer model and judge, binary CORRECT/WRONG. Recall@20 counts a question as a hit when `gpt-4o` judges at least one of the first 20 retrieved memories relevant, using the same relevance prompt Supermemory uses for its published 97% Recall@20, so the two are directly comparable in method. Per-question records, the answer prompt and the relevance labels are in the [results repo](https://github.com/maximem-ai/eval_benchmark_runs_output), together with each vendor's own published numbers, which were not re-run here. Details: [docs/DEVIATIONS.md](docs/DEVIATIONS.md).
 
 ## Contents
 
@@ -34,7 +33,7 @@ LongMemEval: `LongMemEval_S`, run 2026-10-13, single run, `gpt-5.4` answer model
 
 ## Quickstart
 
-You need Python 3.10 or newer, an `OPENAI_API_KEY` (it drives the answer model and the judge), and a key for the provider you want to test.
+You need Python 3.10 or newer, an `OPENAI_API_KEY` (it drives the judge), a `GEMINI_API_KEY` for the default LongMemEval answer model, and a key for the provider you want to test.
 
 ```bash
 git clone https://github.com/maximem-ai/memory_and_context_eval_harness.git
@@ -56,7 +55,7 @@ A standalone runner that uses the LongMemEval-S settings this harness ships with
 ```bash
 pip install -r requirements-longmemeval.txt      # pins maximem-synap==0.5.8
 cp .env.example .env                             # set SYNAP_API_KEY, SYNAP_INSTANCE_ID,
-                                                 # SYNAP_BASE_URL (optional) and ONE LLM key
+                                                 # SYNAP_BASE_URL (optional), OPENAI_API_KEY and GEMINI_API_KEY
 python scripts/download_datasets.py --dataset longmemeval --variant s
 python -m benchmarks.longmemeval.run --user-prefix mytry1_ --max-questions 3   # smoke test
 python -m benchmarks.longmemeval.run --user-prefix mytry2_                     # full run
@@ -71,7 +70,7 @@ Read this before a full run:
 - **S scores are not comparable to scores from any other split**, such as M. Only the haystack size differs, so the question ids look the same. The runner refuses any file that is not exactly the S split.
 - **The score depends on your Synap instance's own configuration** (extraction, deduplication, ranking). This repo does not set it. The aim is identical settings on our side, not a reproduced number.
 - **The judge is `openai/gpt-4o` with LongMemEval's own prompt.** Any other judge makes the score not comparable to published LongMemEval numbers. The runner prints a warning and records it in the manifest.
-- **The LongMemEval rows above use these same settings** (`gpt-5.4` answer, `gpt-4o` judge, accurate retrieval, source chunks and metadata on). The runner's own headline is the answerable-only figure; the all-500 figure is in `summary.json` under `all_questions`.
+- **The LongMemEval rows above use these same settings** (`gemini-3.8-flash` answer, `gpt-4o` judge, accurate retrieval, source chunks and metadata on). The runner's own headline is the answerable-only figure; the all-500 figure is in `summary.json` under `all_questions`.
 
 ## How it works
 

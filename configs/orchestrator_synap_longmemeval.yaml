@@ -1,4 +1,4 @@
-# Synap Orchestrator — gpt-5.4 answer + gpt-4o judge
+# Synap Orchestrator — gemini-3.8-flash answer + gpt-4o judge
 # Single-pipeline (LongMemEval) by default. Enable LoCoMo when ingested.
 
 orchestrator:
@@ -8,8 +8,8 @@ orchestrator:
     config_path: "./configs/synap.yaml"
 
   llm:
-    model: "gpt-5.4"
-    provider: "openai"
+    model: "gemini-3.8-flash"
+    provider: "gemini"
     judge_model: "gpt-4o"
     temperature: 0.0
 

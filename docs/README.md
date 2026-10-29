@@ -40,7 +40,7 @@ documented in [Build Your Own Adapter](BUILD_YOUR_OWN_ADAPTER.md).
 
 ## Published results
 
-Benchmark results (LongMemEval 95.2% on all 500 questions, LoCoMo 93.2%), full
+Benchmark results (LongMemEval 95.6% on all 500 questions, LoCoMo 93.2%), full
 methodology, per-question records and the cross-vendor comparison live in
 [`maximem-ai/eval_benchmark_runs_output`](https://github.com/maximem-ai/eval_benchmark_runs_output).
 
